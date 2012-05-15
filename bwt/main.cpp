@@ -7,12 +7,22 @@
 //
 
 #include <iostream>
+#include <string>
+#include <vector>
+#include <algorithm>
+using namespace std;
 
-int main (int argc, const char * argv[])
-{
-
-    // insert code here...
-    std::cout << "Hello, World!\n";
-    return 0;
+int main()
+{	string sraw,sout;
+	int b;
+	while(cin>>sraw){
+        sout=encode(sraw);
+        cout<<"encode:"<<sout<<endl;
+    }
+	cin>>b;
+    
 }
+
+
+
 
