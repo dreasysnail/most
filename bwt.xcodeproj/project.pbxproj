@@ -8,9 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		7863919E156297C200850697 /* bwt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7863919D156297C200850697 /* bwt.cpp */; };
-		A536A4D6143AAB5100A4F152 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A536A4D5143AAB5100A4F152 /* main.cpp */; };
+		786391A615629AF100850697 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 786391A515629AF100850697 /* main.cpp */; };
 		A536A4D8143AAB5100A4F152 /* bwt.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = A536A4D7143AAB5100A4F152 /* bwt.1 */; };
-		A5417CE9144EAE0C00BDAB44 /* compress.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A5417CE8144EAE0C00BDAB44 /* compress.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,10 +27,10 @@
 
 /* Begin PBXFileReference section */
 		7863919D156297C200850697 /* bwt.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = bwt.cpp; sourceTree = "<group>"; };
+		786391A0156298C200850697 /* bwt.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bwt.h; sourceTree = "<group>"; };
+		786391A515629AF100850697 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		A536A4D1143AAB5100A4F152 /* bwt */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = bwt; sourceTree = BUILT_PRODUCTS_DIR; };
-		A536A4D5143AAB5100A4F152 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		A536A4D7143AAB5100A4F152 /* bwt.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = bwt.1; sourceTree = "<group>"; };
-		A5417CE8144EAE0C00BDAB44 /* compress.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = compress.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -64,10 +63,10 @@
 		A536A4D4143AAB5100A4F152 /* bwt */ = {
 			isa = PBXGroup;
 			children = (
-				A536A4D5143AAB5100A4F152 /* main.cpp */,
-				A5417CE8144EAE0C00BDAB44 /* compress.cpp */,
 				7863919D156297C200850697 /* bwt.cpp */,
+				786391A0156298C200850697 /* bwt.h */,
 				A536A4D7143AAB5100A4F152 /* bwt.1 */,
+				786391A515629AF100850697 /* main.cpp */,
 			);
 			path = bwt;
 			sourceTree = "<group>";
@@ -119,9 +118,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A536A4D6143AAB5100A4F152 /* main.cpp in Sources */,
-				A5417CE9144EAE0C00BDAB44 /* compress.cpp in Sources */,
 				7863919E156297C200850697 /* bwt.cpp in Sources */,
+				786391A615629AF100850697 /* main.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
