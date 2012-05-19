@@ -64,17 +64,19 @@ class Suffix {
     int origin_node;
     int first_char_index;
     int last_char_index;
+    int stringcount;
     Suffix( int node, int start, int stop )
     : origin_node( node ),
     first_char_index( start ),
-    last_char_index( stop ){};
-    int Explicit(){ return first_char_index > last_char_index; }
+    last_char_index( stop ){stringcount=1;};
+    int Explicit(){ return 1-Implicit(); }
     int Implicit(){ return last_char_index >= first_char_index; }
     void Canonize();
     
     //my custom function
     int countString(const string &query );
     bool isExistString(const string &query);
+    bool initialize();
     
 };
 
@@ -125,7 +127,7 @@ class Node {
     static int Count;
     static int Leaf;
     //my custome var
-    //int my_node_index;
+    int my_node_index;
     int leaf_count_beneath;
     int first_char_index;
     int last_char_index;
@@ -196,6 +198,8 @@ void AddPrefix( Suffix &active, int last_char_index );
 ostream &operator<<( ostream &s, const Suffix &str );
 ostream &operator<<( ostream &s, Aux &a );
 ostream &operator<<( ostream &s, const Edge &edge );
+ostream &operator<<( ostream &s, const Node &node );
 istream &operator>>( istream &s, Buffer &b );
 void dump_edges( Suffix s1 );
 void AddSuffixLink( int &last_parent, int parent );
+void print_parents( ostream &s, int node );

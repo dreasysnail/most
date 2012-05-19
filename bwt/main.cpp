@@ -35,10 +35,13 @@ int main()
     while (true) {
         cout << "Enter string: " << flush;
         cin.getline( T, MAX_LENGTH - 1 );
+        cout<<T<<endl;
+        
         if (T[0]=='.')
             break;
         else {
             N = strlen( T ) - 1;
+            //cout<<N<<endl;
             //
             // The active point is the first non-leaf suffix in the
             // tree.  We start by setting this to be the empty string
@@ -49,6 +52,23 @@ int main()
             
             for ( int i = 0 ; i <= N ; i++ )
                 AddPrefix( active, i );
+            
+            
+            //display
+            for(int i=0;i<Node::Count;i++){
+                cout<<i<<"   "<<Nodes[i].father<<"   "<<Nodes[i].leaf_index<<"   "<<Nodes[i].suffix_node<<"    "<<Nodes[i].leaf_count_beneath<<endl;
+                //         Nodes[i].showNodeString();
+                
+                
+                
+                
+                
+            }
+            cout<<active.countString("MAD")<<endl;
+            
+            
+            active.initialize();
+            
             
             
             
@@ -68,17 +88,9 @@ int main()
         }
     }
     //print info
-    for(int i=0;i<Node::Count;i++){
-        cout<<i<<"   "<<Nodes[i].father<<"   "<<Nodes[i].leaf_index<<"   "<<Nodes[i].first_char_index<<"   "<<Nodes[i].last_char_index<<"  "<<Nodes[i].leaf_count_beneath<<endl;
-        //  Nodes[i].showNodeString();
-        
-        
-        
-        
-        
-    }
     
-    cout<<active.countString("hah")<<endl;
+    
+    
    
        return 1;
 };
