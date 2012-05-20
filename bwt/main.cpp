@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include "bwt.h"
+#include "common.h"
 
 using namespace std;
 
@@ -16,23 +17,39 @@ extern Edge Edges[ HASH_TABLE_SIZE ];
 extern Node Nodes[ MAX_LENGTH * 2 ];
 extern char T[ MAX_LENGTH ];
 extern int N;
+void printUsage();
 
-int main()
+int main(int argc, char **argv)
 {
-    
-    cout << "Normally, suffix trees require that the last\n"
-    << "character in the input string be unique.  If\n"
-    << "you don't do this, your tree will contain\n"
-    << "suffixes that don't end in leaf nodes.  This is\n"
-    << "often a useful requirement. You can build a tree\n"
-    << "in this program without meeting this requirement,\n"
-    << "but the validation code will flag it as being an\n"
-    << "invalid tree\n\n";
-    
-    
     Suffix active( 0, 0, -1 );  // The initial active prefix
     
     while (true) {
+        if (argv[1][1]!='m'&&argc<4) {
+            printUsage();
+            exit(1);
+        }
+        if (argv[1][1]=='i'&&argc==4) {
+            genomeRegions gR;
+            gR.readBed(argv[2]);
+            gR.readFasta(argv[3]);
+            vector<string>::iterator it;
+            string tempString;
+            for (it=gR.genomeSeqs.begin(); it!=gR.genomeSeqs.end(); it++) {
+                tempString += (*it)+"#";
+                (*it).clear();
+            }
+            cout<<tempString<<endl;
+            strcpy(T, tempString.c_str());
+            tempString.clear();
+            N = strlen( T ) - 1;
+            for ( int i = 0 ; i <= N ; i++ )
+                AddPrefix( active, i );
+            cout<<active.countString("tcc")<<endl;
+            return 1;
+        }
+        
+        
+        
         cout << "Enter string: " << flush;
         cin.getline( T, MAX_LENGTH - 1 );
         cout<<T<<endl;
@@ -65,8 +82,6 @@ int main()
                 
             }
             cout<<active.countString("MAD")<<endl;
-            
-            
             active.initialize();
             
             
@@ -94,4 +109,29 @@ int main()
    
        return 1;
 };
+
+void printUsage()
+{
+	string usage =	"----------------------------------------------------------------------\n";
+	usage		+=	"        Motif discovery system \n";
+	usage		+=	"        Developed by \n";
+	usage		+=	"        jeremy071242044@gmail.com\n";
+	usage		+=	"----------------------------------------------------------------------\n";
+	usage		+=	"    motif [option] <parameter1> <parameter2> \n";
+	usage		+=	"  Options:\n";
+	usage		+=	"    -m --manually input\t<DNA sequence file>\t<Annotation file>\n\t\tTrain CTF on dataset given in parameters\n\n";
+	usage		+=	"    -i --file\t<bed file>\t<DNA sequence file>\n\t\tPredict on DNA sequences\n\n";
+	usage		+=	"    -h --help\n\t\tPrint help information.\n";
+    usage		+=	"    -d --debug\n\t\trun some test.\n";
+	cout<<usage<<endl;
+    
+    cout << "Normally, suffix trees require that the last\n"
+    << "character in the input string be unique.  If\n"
+    << "you don't do this, your tree will contain\n"
+    << "suffixes that don't end in leaf nodes.  This is\n"
+    << "often a useful requirement. You can build a tree\n"
+    << "in this program without meeting this requirement,\n"
+    << "but the validation code will flag it as being an\n"
+    << "invalid tree\n\n"<<endl;
+}
 
