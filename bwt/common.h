@@ -59,4 +59,5 @@ inline string trim(std::string& str)
 	return str;
 }
 
+void printProgress(const int i,const string& message);
 #endif

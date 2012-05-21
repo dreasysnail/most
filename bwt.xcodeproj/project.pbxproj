@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7827F91015694A27003EAF34 /* motif.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7827F90F15694A27003EAF34 /* motif.cpp */; };
 		7863919E156297C200850697 /* bwt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7863919D156297C200850697 /* bwt.cpp */; };
 		786391A615629AF100850697 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 786391A515629AF100850697 /* main.cpp */; };
 		7885A7EB1568B83200C5DE99 /* common.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7885A7EA1568B83200C5DE99 /* common.cpp */; };
@@ -27,6 +28,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		7827F90F15694A27003EAF34 /* motif.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = motif.cpp; sourceTree = "<group>"; };
+		7827F91215694A33003EAF34 /* motif.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = motif.h; sourceTree = "<group>"; };
 		7863919D156297C200850697 /* bwt.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = bwt.cpp; sourceTree = "<group>"; };
 		786391A0156298C200850697 /* bwt.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bwt.h; sourceTree = "<group>"; };
 		786391A515629AF100850697 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
@@ -71,6 +74,8 @@
 				7863919D156297C200850697 /* bwt.cpp */,
 				7885A7EA1568B83200C5DE99 /* common.cpp */,
 				7885A7ED1568B84500C5DE99 /* common.h */,
+				7827F90F15694A27003EAF34 /* motif.cpp */,
+				7827F91215694A33003EAF34 /* motif.h */,
 				786391A0156298C200850697 /* bwt.h */,
 				A536A4D7143AAB5100A4F152 /* bwt.1 */,
 				7885A7FE1568E86200C5DE99 /* temp.bed */,
@@ -130,6 +135,7 @@
 				7863919E156297C200850697 /* bwt.cpp in Sources */,
 				786391A615629AF100850697 /* main.cpp in Sources */,
 				7885A7EB1568B83200C5DE99 /* common.cpp in Sources */,
+				7827F91015694A27003EAF34 /* motif.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

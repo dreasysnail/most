@@ -7,6 +7,7 @@
 //
 
 #include "common.h"
+#include "motif.h"
 
 
 bool genomeRegions::readBed(const string &filename){
@@ -116,8 +117,6 @@ void genomeRegions::getSeq(){
         }
         //last one
         genomeSeqs.push_back(rawGenome[currentChr].substr(startCut,endCut));
-        startCut=it->startP;
-        endCut=it->endP;
         //clear memory
         rawGenome[currentChr].clear();
     } catch (exception &e) {
@@ -127,3 +126,12 @@ void genomeRegions::getSeq(){
     
 }
 
+
+void printProgress(const int i,const string& message){
+    if (i==0) {
+        cout<<endl<<message<<endl;
+    }
+    if (i%(int((K_5)/10)+1)==0) {
+        cout<<">>>";
+    }
+}

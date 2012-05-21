@@ -36,8 +36,8 @@ using std::min;
 // are stored in a hash table, whose size is also
 // defined here.
 //
-const int MAX_LENGTH = 10000;
-const int HASH_TABLE_SIZE = 21790;  //A prime roughly 10% larger
+const int MAX_LENGTH = 800000;
+const int HASH_TABLE_SIZE = 3000000;  //A prime roughly 10% larger
 
 
 

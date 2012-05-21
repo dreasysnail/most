@@ -7,8 +7,12 @@
 //
 
 #include <iostream>
+#include <string>
+#include <algorithm>
+#include <cctype>
 #include "bwt.h"
 #include "common.h"
+#include "motif.h"
 
 using namespace std;
 
@@ -18,7 +22,11 @@ extern Node Nodes[ MAX_LENGTH * 2 ];
 extern char T[ MAX_LENGTH ];
 extern int N;
 void printUsage();
+void printProgress(const int i,const string& message);
+extern int GenomeSize;
+extern int motif[K_5];
 
+int temp;
 int main(int argc, char **argv)
 {
     Suffix active( 0, 0, -1 );  // The initial active prefix
@@ -35,16 +43,40 @@ int main(int argc, char **argv)
             vector<string>::iterator it;
             string tempString;
             for (it=gR.genomeSeqs.begin(); it!=gR.genomeSeqs.end(); it++) {
+                if ((*it)=="") {
+                    continue;
+                }
                 tempString += (*it)+"#";
+                transform(tempString.begin(), tempString.end(), tempString.begin(), ::toupper);
+                GenomeSize += (*it).size();
                 (*it).clear();
             }
-            cout<<tempString<<endl;
-            strcpy(T, tempString.c_str());
+            
+            strcpy(T,(tempString).c_str());
             tempString.clear();
-            N = strlen( T ) - 1;
+            //         cout<<T<<endl;
+            N = strlen(T) - 1;
+            
             for ( int i = 0 ; i <= N ; i++ )
                 AddPrefix( active, i );
-            cout<<active.countString("tcc")<<endl;
+            for (int i = 0; i <(K_5); i++) {
+                string query=translate(i);
+                motif[i]=active.countString(query);
+                temp+=motif[i];
+                printProgress(i,"find kmer from suffix tree:");
+            }
+            cout<<temp<<endl;
+            for (int i =0; i <(K_5); i++) {
+                if (motif[i]!=0||i%5==0) {
+                    continue;
+                }
+                
+                float score = fillMotif(i);
+                if (score) {
+                    cout<<"motif:"<<translate(i)<<"\tscore:"<<score<<endl;
+                }
+            // printProgress(i,"calculate motifs");
+            }
             return 1;
         }
         
@@ -134,4 +166,5 @@ void printUsage()
     << "but the validation code will flag it as being an\n"
     << "invalid tree\n\n"<<endl;
 }
+
 
