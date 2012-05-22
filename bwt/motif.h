@@ -16,9 +16,12 @@
 
 using namespace std;
 
-#define K 6
-#define K_5 15625
-#define DELTA 2.5
+#define K 10
+#define K_5 9765625
+//#define K 6
+//#define K_5 15625
+
+#define DELTA 6 
 
 
 
@@ -26,6 +29,7 @@ int getIndex();
 float fillMotif(const int index);
 
 string translate(const int index);
+float pow1(float base,int index);
 
 inline bool ascending(int x[],const vector<int> &traverseP,int &travIndex){
     int tempIndex = travIndex;
@@ -34,13 +38,17 @@ inline bool ascending(int x[],const vector<int> &traverseP,int &travIndex){
         tempIndex = int(tempIndex/4);
     } 
     travIndex++;
-    if (travIndex>pow(4,traverseP.size())){
+    if (travIndex>pow1(4,traverseP.size())){
         //traversal end 
         travIndex=0;
         return true;
     }
     return false;
 }
+
+
+
+
 
 
 #endif

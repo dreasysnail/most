@@ -110,6 +110,9 @@
 /* Begin PBXProject section */
 		A536A4C8143AAB5000A4F152 /* Project object */ = {
 			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0430;
+			};
 			buildConfigurationList = A536A4CB143AAB5000A4F152 /* Build configuration list for PBXProject "bwt" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;

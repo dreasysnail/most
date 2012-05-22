@@ -22,7 +22,7 @@ float fillMotif(const int index){
     vector<int> traversalPoint;
     int x[K]={0};
     //0:* 1:A 2:C 3:G 4:T 
-    float probThresh=pow(0.25,K)*DELTA;
+    float probThresh=pow1(0.25,K)*DELTA;
     //    cout<<pow(0.25, K)<<endl;
     for (int i=0; i<K; i++){
         currentNum = tempIndex%5;
@@ -75,7 +75,7 @@ float fillMotif(const int index){
     }
     */
     motif[index] = count;
-    if (count==0||count>probThresh*GenomeSize) {
+    if (count>probThresh*GenomeSize) {
         return int(count*1000/probThresh/GenomeSize)/1000.0;
     }
     else {
@@ -113,4 +113,16 @@ string translate(const int index){
         }
     }
     return temp;
+}
+
+float pow1(float base,int index){
+    float pow = 1;
+    while (index>0) {
+        if (index%2==1) {
+            pow = pow * base;
+        }
+        base = base * base;
+        index = int(index/2);
+    }
+    return pow;
 }

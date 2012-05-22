@@ -21,7 +21,8 @@
 // is not -1.
 //
 
-Edge Edges[ HASH_TABLE_SIZE ];
+Edge *Edges;
+Node *Nodes;
 
 
 
@@ -34,7 +35,7 @@ Edge Edges[ HASH_TABLE_SIZE ];
 
 int Node::Count = 1;
 int Node::Leaf = 1;
-Node Nodes[ MAX_LENGTH * 2 ];
+
 
 //
 // The input buffer and character count.  Please note that N
@@ -52,6 +53,8 @@ Edge::Edge()
 {
     start_node = -1;
 }
+
+
 
 //
 // I create new edges in the program while walking up
@@ -73,9 +76,8 @@ Edge::Edge( int init_first, int init_last, int parent_node )
     
     //custom(icarus)
     Nodes[end_node].leaf_count_beneath=1;
-//    Nodes[end_node].above_edge_first_char_index=init_first;
-
-
+#ifdef display 
+    Nodes[end_node].above_edge_first_char_index=init_first;
     //initialize new node's char index
     Nodes[end_node].last_char_index=init_last+1;
     
@@ -90,6 +92,7 @@ Edge::Edge( int init_first, int init_last, int parent_node )
         fatherNode=Nodes[fatherNode].father;
     }
     Nodes[end_node].first_char_index=currentCharIndex;
+#endif
     
     //Nodes[end_node].my_node_index=end_node;
 }
@@ -117,6 +120,7 @@ void Edge::Insert()
     while ( Edges[ i ].start_node != -1 )
         i = ++i % HASH_TABLE_SIZE;
     Edges[ i ] = *this;
+    
 }
 
 //
@@ -172,7 +176,7 @@ Edge Edge::Find( int node, int c )
     for ( ; ; ) {
         if ( Edges[ i ].start_node == node ) 
 //poisonous when string changed, just take for granted that no collision occurs(icarus)
-//            if ( c == T[ Edges[ i ].first_char_index ] )
+//if ( c == T[ Edges[ i ].first_char_index ] )
                 return Edges[ i ];
         if ( Edges[ i ].start_node == -1 )
             return Edges[ i ];
@@ -202,21 +206,24 @@ int Edge::SplitEdge( Suffix &s )
 {
     Remove();
     //act to split point
-    Edge *new_edge =
-    new Edge( first_char_index,
-             first_char_index + s.last_char_index - s.first_char_index,
-             s.origin_node );
+    Edge newEdge(  first_char_index,
+                 first_char_index + s.last_char_index - s.first_char_index,
+                 s.origin_node );
+    Edge *new_edge = &newEdge;
     new_edge->Insert();
     
     
     
+    
     //update above edge first char index
+#ifdef display
     int tempNode = new_edge -> end_node;
     while (Nodes[tempNode].father!=0) {
         tempNode=Nodes[tempNode].father;
     }
     Nodes[tempNode].above_edge_first_char_index = s.first_char_index;
     
+#endif
     //
     
     
@@ -242,8 +249,7 @@ int Edge::SplitEdge( Suffix &s )
     }
     */
     
-    
-    return new_edge->end_node;
+    return start_node;
     //
 }
 
@@ -254,6 +260,7 @@ int Edge::SplitEdge( Suffix &s )
 // would be really great if I had some code that will
 // print out the tree in a graphical fashion, but I don't!
 //
+/*
 
 void dump_edges( int current_n )
 {
@@ -279,6 +286,7 @@ void dump_edges( int current_n )
         cout << "\n";
     }
 }
+*/
 
 //
 // A suffix in the tree is denoted by a Suffix structure
@@ -326,31 +334,31 @@ void Suffix::Canonize()
 // routine can do all its work one more time.
 //
 
-void AddPrefix( Suffix &active, int last_char_index )
+void Suffix::AddPrefix(int current_index )
 {
     int parent_node;
     int last_parent_node = -1;
     
     for ( ; ; ) {
         Edge edge;
-        parent_node = active.origin_node;
+        parent_node = origin_node;
         //
         // Step 1 is to try and find a matching edge for the given node.
         // If a matching edge exists, we are done adding edges, so we break
         // out of this big loop.
         //
-        if ( active.Explicit() ) {
-            edge = Edge::Find( active.origin_node, T[ last_char_index ] );
+        if ( Explicit() ) {
+            edge = Edge::Find(origin_node, T[ current_index ] );
             if ( edge.start_node != -1 )
                 break;
         } 
         else { //implicit node, a little more complicated
-            edge = Edge::Find( active.origin_node, T[ active.first_char_index ] );
-            int span = active.last_char_index - active.first_char_index;
+            edge = Edge::Find( origin_node, T[ first_char_index ] );
+            int span =last_char_index - first_char_index;
             //if still match
-            if ( T[ edge.first_char_index + span + 1 ] == T[ last_char_index ] )
+            if ( T[ edge.first_char_index + span + 1 ] == T[ current_index ] )
                 break;
-            parent_node = edge.SplitEdge( active );
+            parent_node = edge.SplitEdge( *this );
         }
         //
         // We didn't find a matching edge, so we create a new one, add
@@ -359,11 +367,12 @@ void AddPrefix( Suffix &active, int last_char_index )
         // means we need to create a suffix link to the new node from
         // the last node we visited.
         //
-        Edge *new_edge = new Edge( last_char_index, N, parent_node );
+        Edge newEdge( current_index, N, parent_node );
+        Edge *new_edge = &newEdge;
         new_edge->Insert();
         Nodes[new_edge->end_node].leaf_index=Node::Leaf++;
         
-        //update leaf_count_beneath for upper node
+        //update leaf_count_beneath for upper node(icarus)
         int fatherNode = parent_node;
         while (fatherNode!=0) {
             Nodes[fatherNode].leaf_count_beneath++;
@@ -377,17 +386,17 @@ void AddPrefix( Suffix &active, int last_char_index )
         //
         // This final step is where we move to the next smaller suffix  abc bc c
         //
-        if ( active.origin_node == 0 )
-            active.first_char_index++;
+        if ( origin_node == 0 )
+            first_char_index++;
         else
-            active.origin_node = Nodes[ active.origin_node ].suffix_node;
-        active.Canonize();
+            origin_node = Nodes[ origin_node ].suffix_node;
+       Canonize();
     }
     if ( last_parent_node > 0 )
         Nodes[ last_parent_node ].suffix_node = parent_node;
-    active.last_char_index++;  //Now the endpoint is the next active point
-    active.Canonize();
-};
+    last_char_index++;  //Now the endpoint is the next active point
+    Canonize();
+}
 
 
 //
@@ -523,6 +532,7 @@ int Suffix::countString(const string &query ){
                     return 0;
                 }
                 else {
+                    // return edgeString.size()==queryTemp?Nodes[tempEdge.end_node].leaf_count_beneath:Nodes[currentNode].leaf_count_beneath;
                     return Nodes[tempEdge.end_node].leaf_count_beneath;
                 }
             }
@@ -664,7 +674,7 @@ ostream &operator<<( ostream &s, const Suffix &str )
     << str.last_char_index
     << ") ";
     s << "\"";
-    print_parents( s, str.origin_node );
+    print_parents( s, str.origin_node);
     for ( int i = str.first_char_index ;
          i <= str.last_char_index ;
          i++ )
@@ -675,12 +685,12 @@ ostream &operator<<( ostream &s, const Suffix &str )
 }
 
 
-void print_parents( ostream &s, int node )
+void print_parents( ostream &s, int node)
 {
     if ( node != 0 )
         for ( int i = 0 ; i < HASH_TABLE_SIZE ; i++ ) {
             if ( Edges[ i ].end_node == node ) {
-                print_parents( s, Edges[ i ].start_node );
+                print_parents( s, Edges[ i ].start_node);
                 for ( int j = Edges[ i ].first_char_index ;
                      j <= Edges[ i ].last_char_index
                      ; j++ )
@@ -764,43 +774,7 @@ ostream &operator<<( ostream &s, const Edge &edge )
     return s;
 }
 
-//
-// Edges are inserted into the hash table using this hashing
-// function.
-//
 
-//
-// This routine prints out the contents of the suffix tree
-// at the end of the program by walking through the
-// hash table and printing out all used edges.  It
-// would be really great if I had some code that will
-// print out the tree in a graphical fashion, but I don't!
-//
-
-
-
-void dump_edges( Suffix s1 )
-{
-    cout << "Active prefix = " << s1 << "\n";
-    cout << " Hash Start  End  Suf  first last  String\n";
-    for ( int j = 0 ; j < HASH_TABLE_SIZE ; j++ ) {
-        Edge *s = Edges + j;
-        if ( s->start_node == -1 )
-            continue;
-        cout << setw( 4 ) << j << " "
-        << setw( 5 ) << s->start_node << " "
-        << setw( 5 ) << s->end_node << " "
-        << setw( 3 ) << Nodes[ s->end_node ].suffix_node << " "
-        << setw( 5 ) << s->first_char_index << " "
-        << setw( 6 ) << s->last_char_index << "  ";
-        for ( int l = s->first_char_index ; l <= ( s1.last_char_index < s->last_char_index ? s1.last_char_index : s->last_char_index ) ; l++ )
-            cout << T[ l ];
-        cout << "\n";
-    }
-    cout << "Hit enter to continue..." << flush;
-    std::string s;
-    getline( cin, s ); 
-}
 
 //
 // Adding a suffix line in AddPrefix() is really
@@ -811,7 +785,8 @@ void dump_edges( Suffix s1 )
 // move it to a separate routine, even though it
 // isn't being done that way in STREE.CPP
 //
-void AddSuffixLink( int &last_parent, int parent )
+
+void Suffix::AddSuffixLink( int &last_parent, int parent)
 {
     if ( last_parent > 0 ) {
         cout << "Creating suffix link from node "

@@ -36,9 +36,15 @@ using std::min;
 // are stored in a hash table, whose size is also
 // defined here.
 //
-const int MAX_LENGTH = 800000;
-const int HASH_TABLE_SIZE = 3000000;  //A prime roughly 10% larger
 
+//200M
+const int MAX_LENGTH = 2e6;
+const int HASH_TABLE_SIZE = 5e6;  //A prime roughly 10% larger
+
+//display for node string
+
+#undef display
+//#define display
 
 
 //
@@ -59,25 +65,37 @@ const int HASH_TABLE_SIZE = 3000000;  //A prime roughly 10% larger
 // 
 // from first_c_i to last_c_i :current implicit one expect to be inserted.
 
+class Node;
+class Edge;
+
 class Suffix {
-    public :
+
+     
+    
+public :
     int origin_node;
     int first_char_index;
     int last_char_index;
     int stringcount;
-    Suffix( int node, int start, int stop )
+    Suffix( int node, int start, int stop)
     : origin_node( node ),
     first_char_index( start ),
-    last_char_index( stop ){stringcount=1;};
+    last_char_index( stop )
+    {stringcount=1;};
     int Explicit(){ return 1-Implicit(); }
     int Implicit(){ return last_char_index >= first_char_index; }
     void Canonize();
-    
+
     //my custom function
+    void AddPrefix(int last_char_index );
     int countString(const string &query );
     bool isExistString(const string &query);
     bool initialize();
-    
+    //static Node (*Nodes);
+    //static Edge (*Edges);
+    void AddSuffixLink( int &last_parent, int parent);   
+
+
 };
 
 //
@@ -91,7 +109,7 @@ class Suffix {
 //
 
 class Edge {
-    public :
+public :
     int first_char_index;
     int last_char_index;
     int end_node;
@@ -105,6 +123,10 @@ class Edge {
     int SplitEdge( Suffix &s );
     static Edge Find( int node, int c );
     static int Hash( int node, int c );
+    
+
+    //   static Node (*Nodes);
+    //static Edge (*Edges);
 };
 
 //
@@ -115,23 +137,33 @@ class Edge {
 //  are stored in a simple array.
 //
 class Node {
-    public :
+    
+public :
     int suffix_node;
     int father;
     int leaf_index;
-
     Node() { suffix_node = -1;
         father=-1;
         leaf_index=-1;}
     void showNodeString();
     static int Count;
     static int Leaf;
-    //my custome var
-    int my_node_index;
+    
+    //my custome variance
+#ifdef display
+      int my_node_index;    
+      int first_char_index;
+      int last_char_index;
+      int above_edge_first_char_index;
+#endif
     int leaf_count_beneath;
-    int first_char_index;
-    int last_char_index;
-    int above_edge_first_char_index;
+    
+    
+
+    
+    //    static Node (*Nodes);
+    //static Edge (*Edges);
+    
 };
 
 
@@ -201,5 +233,6 @@ ostream &operator<<( ostream &s, const Edge &edge );
 ostream &operator<<( ostream &s, const Node &node );
 istream &operator>>( istream &s, Buffer &b );
 void dump_edges( Suffix s1 );
-void AddSuffixLink( int &last_parent, int parent );
-void print_parents( ostream &s, int node );
+void print_parents( ostream &s, int node);
+
+

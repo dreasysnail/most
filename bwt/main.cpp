@@ -17,22 +17,28 @@
 using namespace std;
 
 //global var's declarision
-extern Edge Edges[ HASH_TABLE_SIZE ];
-extern Node Nodes[ MAX_LENGTH * 2 ];
+
 extern char T[ MAX_LENGTH ];
 extern int N;
 void printUsage();
 void printProgress(const int i,const string& message);
 extern int GenomeSize;
 extern int motif[K_5];
-
+extern Edge* Edges;
+extern Node* Nodes;
+void preInitialization(Edge* Edges,Node* Nodes);
 int temp;
+
 int main(int argc, char **argv)
 {
-    Suffix active( 0, 0, -1 );  // The initial active prefix
+    Edge *EdgesTemp = new Edge[ HASH_TABLE_SIZE ];
+    Node *NodesTemp = new Node[ MAX_LENGTH * 2 ];
     
+    preInitialization(EdgesTemp,NodesTemp);
+    
+    Suffix active( 0, 0, -1 );  // The initial active prefix
     while (true) {
-        if (argv[1][1]!='m'&&argc<4) {
+        if (argc<2||(argv[1][1]!='m'&&argc<4)) {
             printUsage();
             exit(1);
         }
@@ -54,15 +60,15 @@ int main(int argc, char **argv)
             
             strcpy(T,(tempString).c_str());
             tempString.clear();
-            //         cout<<T<<endl;
+            //cout<<T<<endl;
             N = strlen(T) - 1;
             
             for ( int i = 0 ; i <= N ; i++ )
-                AddPrefix( active, i );
+                active.AddPrefix(i);
             for (int i = 0; i <(K_5); i++) {
                 string query=translate(i);
                 motif[i]=active.countString(query);
-                temp+=motif[i];
+                 temp+=motif[i];
                 printProgress(i,"find kmer from suffix tree:");
             }
             cout<<temp<<endl;
@@ -77,6 +83,8 @@ int main(int argc, char **argv)
                 }
             // printProgress(i,"calculate motifs");
             }
+            delete [] EdgesTemp;
+            delete [] NodesTemp;
             return 1;
         }
         
@@ -100,7 +108,7 @@ int main(int argc, char **argv)
             //
             
             for ( int i = 0 ; i <= N ; i++ )
-                AddPrefix( active, i );
+                active.AddPrefix( i );
             
             
             //display
@@ -168,3 +176,7 @@ void printUsage()
 }
 
 
+void preInitialization(Edge* EdgesTemp,Node* NodesTemp){
+    Nodes = NodesTemp;
+    Edges = EdgesTemp;
+}
