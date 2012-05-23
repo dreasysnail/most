@@ -43,7 +43,8 @@ int main(int argc, char **argv)
             exit(1);
         }
         if (argv[1][1]=='i'&&argc==4) {
-            genomeRegions gR;
+            //extend 300bp
+            genomeRegions gR(0);
             gR.readBed(argv[2]);
             gR.readFasta(argv[3]);
             vector<string>::iterator it;
@@ -57,7 +58,8 @@ int main(int argc, char **argv)
                 GenomeSize += (*it).size();
                 (*it).clear();
             }
-            
+           
+            //tempString = trimN(tempString);
             strcpy(T,(tempString).c_str());
             tempString.clear();
             //cout<<T<<endl;
@@ -88,6 +90,74 @@ int main(int argc, char **argv)
             return 1;
         }
         
+        
+        
+        
+        // tag mode
+        if (argv[1][1]=='t'&&argc==5) {
+            //extend 300bp
+            genomeRegions gR(0);
+            gR.readBed(argv[2]);
+            gR.readFasta(argv[3]);
+            genomeRegions tag(0);
+            tag.readBed(argv[4]);
+            gR.writeRawTag(tag);
+            gR.getTagBed();
+            //?
+            vector<string>::iterator it;
+            string tempString;
+            for (it=gR.genomeSeqs.begin(); it!=gR.genomeSeqs.end(); it++) {
+                if ((*it)=="") {
+                    continue;
+                }
+                tempString += (*it)+"#";
+
+                transform(tempString.begin(), tempString.end(), tempString.begin(), ::toupper);
+                (*it).clear();
+            }
+            strcpy(T,(tempString).c_str());
+            GenomeSize=tempString.size();
+            tempString.clear();
+            //cout<<T<<endl;
+            //cout<<gR.genomeTags<<endl;
+            
+            int tempGenomeSize=gR.genomeTags.size();
+            cout<<"tagsize:"<<tempGenomeSize<<"\tgenomesize:"<<GenomeSize<<endl;
+            
+            
+            N = strlen(T) - 1;
+            
+            for ( int i = 0 ; i <= N ; i++ )
+                active.AddPrefix(i);
+            for (int i = 0; i <(K_5); i++) {
+                string query=translate(i);
+                motif[i]=active.countString(query);
+                temp+=motif[i];
+                printProgress(i,"find kmer from suffix tree:");
+            }
+            cout<<temp<<endl;
+            cout<<"motif"<<"\tCONscore"<<"\tTAGscore"<<endl;
+            for (int i =0; i <(K_5); i++) {
+                if (motif[i]!=0||i%5==0) {
+                    continue;
+                }
+                
+                float score = fillMotif(i);
+                if (score) {
+                    //loci for this motif
+                    vector<int> loci;
+                    string query=translate(i);
+                    loci = locateMotif(query,T);
+                    float signif = testMotifTag(loci,gR.genomeTags);
+                    cout<<translate(i)<<"\t"<<score<<"\t"<<signif<<endl;
+                }
+                // printProgress(i,"calculate motifs");
+            }
+            delete [] EdgesTemp;
+            delete [] NodesTemp;
+            return 1;
+        }
+
         
         
         cout << "Enter string: " << flush;
@@ -121,7 +191,6 @@ int main(int argc, char **argv)
                 
                 
             }
-            cout<<active.countString("MAD")<<endl;
             active.initialize();
             
             
@@ -161,6 +230,7 @@ void printUsage()
 	usage		+=	"  Options:\n";
 	usage		+=	"    -m --manually input\t<DNA sequence file>\t<Annotation file>\n\t\tTrain CTF on dataset given in parameters\n\n";
 	usage		+=	"    -i --file\t<bed file>\t<DNA sequence file>\n\t\tPredict on DNA sequences\n\n";
+    usage		+=	"    -t --file\t<bed file>\t<DNA sequence file>\n\t<tag bed file>\tPredict on DNA sequences\n\n";
 	usage		+=	"    -h --help\n\t\tPrint help information.\n";
     usage		+=	"    -d --debug\n\t\trun some test.\n";
 	cout<<usage<<endl;

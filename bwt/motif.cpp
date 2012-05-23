@@ -94,7 +94,7 @@ string translate(const int index){
         query = int(query/5);
         switch (currentNum) {
             case 0:
-                temp.push_back('X');
+                temp.push_back('_');
                 break;
             case 1:
                 temp.push_back('A');
@@ -125,4 +125,47 @@ float pow1(float base,int index){
         index = int(index/2);
     }
     return pow;
+}
+
+vector<int> locateMotif(string query,const char T[]){
+    vector<int> loci;
+    bool flag = true;
+    //    cout<<GenomeSize<<endl;
+    for (int i=0; i<GenomeSize; i++) {
+        for (int index=0; index<query.size(); index++) {
+            if(query[index]!='_'&&T[i+index]!=query[index]){
+                flag = false;
+                break;
+            }
+        }
+        if (flag) {
+            loci.push_back(i);
+        }
+        else {
+            flag = true;
+        }
+    }
+    return loci;    
+}
+
+float testMotifTag(const vector<int> &loci,const vector<int>& tag){
+    float sumMotif=0;
+    float sumAround=0;
+    for (int i=0; i<loci.size(); i++) {
+        if (loci[i]<300||loci[i]>tag.size()-300) {
+            continue;
+        }
+        for (int j=-100; j<100; j++) {
+            sumMotif += tag[loci[i]+j];
+        }
+        for (int j=-300; j<-100; j++) {
+            sumAround += tag[loci[i]+j];
+        }
+        for (int j=100; j<300; j++) {
+            sumAround += tag[loci[i]+j];
+        }
+    }
+    cout<<sumMotif<<"\t"<<sumAround<<endl;
+    float result = logf(sumMotif*2/sumAround);
+    return result>0?result:(-result);
 }

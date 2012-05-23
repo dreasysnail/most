@@ -367,6 +367,8 @@ void Suffix::AddPrefix(int current_index )
         // means we need to create a suffix link to the new node from
         // the last node we visited.
         //
+        
+        
         Edge newEdge( current_index, N, parent_node );
         Edge *new_edge = &newEdge;
         new_edge->Insert();

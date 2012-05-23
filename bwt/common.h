@@ -24,10 +24,18 @@ struct genomeRegion {
 
 class genomeRegions{
 public:
+    
+    genomeRegions(int num):extend(num){};
     vector <genomeRegion> genomes;
     vector <string> genomeSeqs;
+    vector <int> genomeTags;
     map <string,string> rawGenome;
+    map <string,vector<int> > rawTag;
+    int extend;
     void getSeq();
+    void getTagBed();    //get 0-1 sequence from bed file
+    void appendTag(int a,int b,const string& chr);
+    void writeRawTag(genomeRegions &tagBed);
     bool readBed(const string &filename);
     bool readFasta(const string &filename);
     
@@ -58,6 +66,37 @@ inline string trim(std::string& str)
 	str.erase(str.find_last_not_of(' ')+1);         //surfixing spaces
 	return str;
 }
+inline string trimN(string &temp){
+    string result("");
+    for (int i=0; i<temp.size(); i++) {
+        if (temp[i]=='N') {
+            continue;
+        }
+        result.push_back(temp[i]);
+    }
+    return result;
+}
 
 void printProgress(const int i,const string& message);
+
+template <class T>
+ostream &operator<<( ostream &s, const vector<T> &v){
+    for (int i=0; i<v.size(); i++)
+    {
+        s<<v[i];
+    }    
+    s<<endl;
+    return s;
+};
+
+template <class T>
+ostream &operator<<( ostream &s, const vector<vector<T> > &m){
+    for (int i=0; i<m[0].size(); i++) {
+        for (int j=0; j<m.size(); j++) {
+            s<<m[i][j]<<'\t';
+        }
+        s<<endl;
+    }
+    return s;
+};
 #endif

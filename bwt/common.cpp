@@ -29,9 +29,9 @@ bool genomeRegions::readBed(const string &filename){
 		string temp;
 		ss>>segment.chr;
 		ss>>temp;
-		segment.startP = atoi(temp.c_str());
+		segment.startP = atoi(temp.c_str())-extend;
 		ss>>temp;
-		segment.endP = atoi(temp.c_str());
+		segment.endP = atoi(temp.c_str())+extend;
         
 		/* Store the bed line */
  		genomes.push_back(segment);
@@ -77,7 +77,9 @@ bool genomeRegions::readFasta(const string &filename){
             rawGenome[chr] += line;
         }
     }
+    //sort genomes
     
+    sort(genomes.begin(), genomes.end(), compareGenome);
     getSeq();
 	return true;
 }
@@ -85,9 +87,8 @@ bool genomeRegions::readFasta(const string &filename){
 
 
 void genomeRegions::getSeq(){
-    //sort genomes
+
     
-    sort(genomes.begin(), genomes.end(), compareGenome);
     
     //assert sorted genomes, deal with overlaps
     int startCut=0;
@@ -97,7 +98,7 @@ void genomeRegions::getSeq(){
     try {
         for (it = genomes.begin(); it!=genomes.end(); it++) {
             if (it->chr!=currentChr) {
-                genomeSeqs.push_back(rawGenome[currentChr].substr(startCut,endCut));
+                genomeSeqs.push_back(rawGenome[currentChr].substr(startCut,endCut-startCut+1));
                 startCut=it->startP;
                 endCut=it->endP;
                 //clear memory
@@ -116,7 +117,8 @@ void genomeRegions::getSeq(){
             }
         }
         //last one
-        genomeSeqs.push_back(rawGenome[currentChr].substr(startCut,endCut));
+        genomeSeqs.push_back(rawGenome[currentChr].substr(startCut,endCut-startCut+1));
+        //cout<<genomeSeqs[1].size()<<endl; 
         //clear memory
         rawGenome[currentChr].clear();
     } catch (exception &e) {
@@ -126,6 +128,91 @@ void genomeRegions::getSeq(){
     
 }
 
+void genomeRegions::writeRawTag(genomeRegions &tagBed){
+    //sort tagBed
+    sort(tagBed.genomes.begin(), tagBed.genomes.end(), compareGenome);
+    string currentChr("");
+    for (int i=0; i<tagBed.genomes.size(); i++) {
+        if (tagBed.genomes[i].chr!=currentChr) {
+            currentChr = tagBed.genomes[i].chr;
+            vector<int> temp;
+            if (rawTag.count(currentChr)) {
+                string errorInfo = "Error! chrome "+currentChr+" information collides in Tag file\n";
+				cout<<errorInfo;
+                continue;
+            }
+            temp.assign(tagBed.genomes.back().endP+1, 0);
+            rawTag[currentChr] = temp;
+
+        }
+        for (int j=tagBed.genomes[i].startP-1; j<tagBed.genomes[i].endP; j++) {
+            rawTag[currentChr][j]++;
+            //            cout<<j;
+        }
+    }
+}
+
+
+void genomeRegions::getTagBed(){
+        
+    //assert sorted genomes, deal with overlaps
+    int startCut=0;
+    int endCut=0;
+    bool first = true;
+    string currentChr("");
+    vector<genomeRegion>::iterator it;
+    try {
+        for (it = genomes.begin(); it!=genomes.end(); it++) {
+            if (it->chr!=currentChr) {
+                if (first) {
+                    first = false;
+                }
+                else {
+                    appendTag(startCut, endCut, currentChr);
+                }
+                startCut=it->startP;
+                endCut=it->endP;
+                //clear memory
+                rawGenome[currentChr].clear();
+                currentChr=it->chr;
+            }
+            else {
+                if (it->startP>endCut) {
+                    appendTag(startCut, endCut, currentChr);            
+                    startCut = it->startP;
+                    endCut = it->endP;
+                }
+                else {
+                    endCut=it->endP>endCut?it->endP:endCut;
+                }
+            }
+        }
+        //last one
+        appendTag(startCut, endCut, currentChr);
+        //clear memory
+        rawTag[currentChr].clear();
+    } catch (exception &e) {
+        cerr<<e.what()<<endl;
+        cerr<<"chrome:"<<currentChr<<" start:"<<startCut<<" end:"<<endCut<<" genomesize"<<rawTag[currentChr].size()<<endl;
+    }
+    
+}
+
+void genomeRegions::appendTag(int a,int b,const string& chr){
+    int tempsize = rawTag[chr].size();
+    //    cout<<tempsize<<endl;
+    for (int i=a-1; i<b; i++) {
+        if (i>=tempsize) {
+            genomeTags.push_back(0);
+            //            cout<<i;
+        }
+        else {
+            genomeTags.push_back(rawTag[chr][i]);
+            //    cout<<endl<<i;
+        }
+    }
+    genomeTags.push_back(2);
+}
 
 void printProgress(const int i,const string& message){
     if (i==0) {
@@ -135,3 +222,7 @@ void printProgress(const int i,const string& message){
         cout<<">>>";
     }
 }
+
+
+
+

@@ -26,10 +26,16 @@ using namespace std;
 
 
 int getIndex();
+
 float fillMotif(const int index);
 
 string translate(const int index);
+
 float pow1(float base,int index);
+
+vector<int> locateMotif(string query,const char T[]);
+
+float testMotifTag(const vector<int> &loci,const vector<int>& tag);
 
 inline bool ascending(int x[],const vector<int> &traverseP,int &travIndex){
     int tempIndex = travIndex;
