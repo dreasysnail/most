@@ -6,7 +6,11 @@
 //  Copyright (c) 2012年 SJTU. All rights reserved.
 //
 
+
 #include "motif.h"
+
+using namespace std;
+
 int motif[K_5]={0};
 int GenomeSize;
 
@@ -165,7 +169,36 @@ float testMotifTag(const vector<int> &loci,const vector<int>& tag){
             sumAround += tag[loci[i]+j];
         }
     }
-    cout<<sumMotif<<"\t"<<sumAround<<endl;
+    //    cout<<sumMotif<<"\t"<<sumAround<<endl;
     float result = logf(sumMotif*2/sumAround);
     return result>0?result:(-result);
+}
+
+string antisense(const string& tempString){
+    string output("");
+    for (int i=tempString.size()-1; i>=0; i--) {
+        switch (tempString[i]) {
+            case 'A':
+                output.push_back('T');
+                break;
+            case 'T':
+                output.push_back('A');
+                break;
+            case 'C':
+                output.push_back('G');
+                break;
+            case 'G':
+                output.push_back('C');
+                break;
+            case '#':
+                output.push_back('#');
+                break;
+            case 'N':
+                output.push_back('N');
+                break;
+            default:
+                break;
+        }
+    }
+    return output;
 }

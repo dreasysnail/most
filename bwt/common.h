@@ -13,9 +13,32 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <algorithm>
 #include <map>
 
-using namespace std;
+//define motif length
+//#define K 10
+//#define K_5 9765625
+#define K 6
+#define K_5 15625
+#define DELTA 2 
+//200M
+const int MAX_LENGTH = 1e6;
+const int HASH_TABLE_SIZE = 2e6;  //A prime roughly 10% larger
+
+//display for node string
+
+#undef display
+//#define display
+
+
+using std::string;
+using std::vector;
+using std::map;
+using std::cerr;
+using std::endl;
+using std::ostream;
+
 struct genomeRegion {
     int startP;
     int endP;
@@ -27,7 +50,9 @@ public:
     
     genomeRegions(int num):extend(num){};
     vector <genomeRegion> genomes;
+    //final seqs
     vector <string> genomeSeqs;
+    //final tags
     vector <int> genomeTags;
     map <string,string> rawGenome;
     map <string,vector<int> > rawTag;
@@ -35,6 +60,7 @@ public:
     void getSeq();
     void getTagBed();    //get 0-1 sequence from bed file
     void appendTag(int a,int b,const string& chr);
+    void appendReverse();
     void writeRawTag(genomeRegions &tagBed);
     bool readBed(const string &filename);
     bool readFasta(const string &filename);

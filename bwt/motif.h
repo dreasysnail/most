@@ -13,15 +13,10 @@
 #include <algorithm>
 #include <vector>
 #include <math.h>
+#include "common.h"
 
-using namespace std;
 
-#define K 10
-#define K_5 9765625
-//#define K 6
-//#define K_5 15625
 
-#define DELTA 6 
 
 
 
@@ -36,6 +31,8 @@ float pow1(float base,int index);
 vector<int> locateMotif(string query,const char T[]);
 
 float testMotifTag(const vector<int> &loci,const vector<int>& tag);
+
+string antisense(const string& tempString);
 
 inline bool ascending(int x[],const vector<int> &traverseP,int &travIndex){
     int tempIndex = travIndex;

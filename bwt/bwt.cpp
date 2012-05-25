@@ -102,9 +102,9 @@ Edge::Edge( int init_first, int init_last, int parent_node )
 // function.
 //
 
-int Edge::Hash( int node, int c )
+long int Edge::Hash( int node, int c )
 {
-    return ( ( node << 8 ) + c ) % HASH_TABLE_SIZE;
+    return ( ( node << 4 ) + c -34 ) % HASH_TABLE_SIZE;
 }
 
 //
@@ -114,9 +114,10 @@ int Edge::Hash( int node, int c )
 // the table until we find the first unused slot.
 //
 
+
 void Edge::Insert()
 {
-    int i = Hash( start_node, T[ first_char_index ] );
+    long int i = Hash( start_node, T[ first_char_index ] );
     while ( Edges[ i ].start_node != -1 )
         i = ++i % HASH_TABLE_SIZE;
     Edges[ i ] = *this;
@@ -136,7 +137,7 @@ void Edge::Insert()
 
 void Edge::Remove()
 {
-    int i = Hash( start_node, T[ first_char_index ] );
+    long int i = Hash( start_node, T[ first_char_index ] );
     while ( Edges[ i ].start_node != start_node ||
            Edges[ i ].first_char_index != first_char_index )
         i = ++i % HASH_TABLE_SIZE;
@@ -147,7 +148,7 @@ void Edge::Remove()
             i = ++i % HASH_TABLE_SIZE;
             if ( Edges[ i ].start_node == -1 )
                 return;
-            int r = Hash( Edges[ i ].start_node, T[ Edges[ i ].first_char_index ] );
+            long int r = Hash( Edges[ i ].start_node, T[ Edges[ i ].first_char_index ] );
             if ( i >= r && r > j )
                 continue;
             if ( r > j && j > i )
@@ -172,11 +173,11 @@ void Edge::Remove()
 
 Edge Edge::Find( int node, int c )
 {
-    int i = Hash( node, c );
+    long int i = Hash( node, c );
     for ( ; ; ) {
         if ( Edges[ i ].start_node == node ) 
 //poisonous when string changed, just take for granted that no collision occurs(icarus)
-//if ( c == T[ Edges[ i ].first_char_index ] )
+            if ( c == T[ Edges[ i ].first_char_index ] )
                 return Edges[ i ];
         if ( Edges[ i ].start_node == -1 )
             return Edges[ i ];

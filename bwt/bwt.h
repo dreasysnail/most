@@ -15,7 +15,7 @@
 #include <cassert>
 #include <string>
 #include <algorithm>
-
+#include "common.h"
 using std::cout;
 using std::cin;
 using std::cerr;
@@ -37,14 +37,6 @@ using std::min;
 // defined here.
 //
 
-//200M
-const int MAX_LENGTH = 2e6;
-const int HASH_TABLE_SIZE = 5e6;  //A prime roughly 10% larger
-
-//display for node string
-
-#undef display
-//#define display
 
 
 //
@@ -82,7 +74,7 @@ public :
     first_char_index( start ),
     last_char_index( stop )
     {stringcount=1;};
-    int Explicit(){ return 1-Implicit(); }
+    int Explicit(){ return last_char_index < first_char_index; }
     int Implicit(){ return last_char_index >= first_char_index; }
     void Canonize();
 
@@ -122,7 +114,7 @@ public :
          int parent_node );
     int SplitEdge( Suffix &s );
     static Edge Find( int node, int c );
-    static int Hash( int node, int c );
+    static long int Hash( int node, int c );
     
 
     //   static Node (*Nodes);

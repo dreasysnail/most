@@ -96,7 +96,7 @@ int main(int argc, char **argv)
         // tag mode
         if (argv[1][1]=='t'&&argc==5) {
             //extend 300bp
-            genomeRegions gR(0);
+            genomeRegions gR(300);
             gR.readBed(argv[2]);
             gR.readFasta(argv[3]);
             genomeRegions tag(0);
@@ -111,10 +111,10 @@ int main(int argc, char **argv)
                     continue;
                 }
                 tempString += (*it)+"#";
-
                 transform(tempString.begin(), tempString.end(), tempString.begin(), ::toupper);
                 (*it).clear();
             }
+            tempString += antisense(tempString)+"#";
             strcpy(T,(tempString).c_str());
             GenomeSize=tempString.size();
             tempString.clear();

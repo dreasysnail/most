@@ -8,6 +8,7 @@
 
 #include "common.h"
 #include "motif.h"
+using namespace std;
 
 
 bool genomeRegions::readBed(const string &filename){
@@ -173,7 +174,7 @@ void genomeRegions::getTagBed(){
                 startCut=it->startP;
                 endCut=it->endP;
                 //clear memory
-                rawGenome[currentChr].clear();
+                rawTag[currentChr].clear();
                 currentChr=it->chr;
             }
             else {
@@ -191,6 +192,8 @@ void genomeRegions::getTagBed(){
         appendTag(startCut, endCut, currentChr);
         //clear memory
         rawTag[currentChr].clear();
+        //append reverse for antisense
+        appendReverse();
     } catch (exception &e) {
         cerr<<e.what()<<endl;
         cerr<<"chrome:"<<currentChr<<" start:"<<startCut<<" end:"<<endCut<<" genomesize"<<rawTag[currentChr].size()<<endl;
@@ -200,7 +203,6 @@ void genomeRegions::getTagBed(){
 
 void genomeRegions::appendTag(int a,int b,const string& chr){
     int tempsize = rawTag[chr].size();
-    //    cout<<tempsize<<endl;
     for (int i=a-1; i<b; i++) {
         if (i>=tempsize) {
             genomeTags.push_back(0);
@@ -211,6 +213,13 @@ void genomeRegions::appendTag(int a,int b,const string& chr){
             //    cout<<endl<<i;
         }
     }
+    genomeTags.push_back(2);
+}
+
+void genomeRegions::appendReverse(){
+    vector<int> temp(genomeTags);
+    reverse(temp.begin(), temp.end());
+    copy(temp.begin(), temp.end(),back_inserter(genomeTags));
     genomeTags.push_back(2);
 }
 
