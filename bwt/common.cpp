@@ -142,7 +142,14 @@ void genomeRegions::writeRawTag(genomeRegions &tagBed){
 				cout<<errorInfo;
                 continue;
             }
-            temp.assign(tagBed.genomes.back().endP+1, 0);
+            int lastThisChr=tagBed.genomes.size()-1;
+            for (int k=i; k<tagBed.genomes.size(); k++) {
+                if (tagBed.genomes[k].chr!=currentChr) {
+                    lastThisChr = k-1;
+                    break;
+                }
+            }
+            temp.assign(tagBed.genomes[lastThisChr].endP+1, 0);
             rawTag[currentChr] = temp;
 
         }
@@ -213,14 +220,14 @@ void genomeRegions::appendTag(int a,int b,const string& chr){
             //    cout<<endl<<i;
         }
     }
-    genomeTags.push_back(2);
+    genomeTags.push_back(0);
 }
 
 void genomeRegions::appendReverse(){
     vector<int> temp(genomeTags);
     reverse(temp.begin(), temp.end());
     copy(temp.begin(), temp.end(),back_inserter(genomeTags));
-    genomeTags.push_back(2);
+    genomeTags.push_back(0);
 }
 
 void printProgress(const int i,const string& message){
@@ -232,6 +239,45 @@ void printProgress(const int i,const string& message){
     }
 }
 
+float pow1(float base,int index){
+    float pow = 1;
+    while (index>0) {
+        if (index%2==1) {
+            pow = pow * base;
+        }
+        base = base * base;
+        index = int(index/2);
+    }
+    return pow;
+}
 
+string antisense(const string& tempString){
+    string output("");
+    for (int i=tempString.size()-1; i>=0; i--) {
+        switch (tempString[i]) {
+            case 'A':
+                output.push_back('T');
+                break;
+            case 'T':
+                output.push_back('A');
+                break;
+            case 'C':
+                output.push_back('G');
+                break;
+            case 'G':
+                output.push_back('C');
+                break;
+            case '#':
+                output.push_back('#');
+                break;
+            case 'N':
+                output.push_back('N');
+                break;
+            default:
+                break;
+        }
+    }
+    return output;
+}
 
 

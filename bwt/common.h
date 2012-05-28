@@ -19,12 +19,13 @@
 //define motif length
 //#define K 10
 //#define K_5 9765625
-#define K 6
-#define K_5 15625
-#define DELTA 2 
+#define K 5
+#define K_5 3125
+#define DELTA 2
+#define PSEUDO 0.001
 //200M
-const int MAX_LENGTH = 1e6;
-const int HASH_TABLE_SIZE = 2e6;  //A prime roughly 10% larger
+const long int MAX_LENGTH = 1e6;
+const long int HASH_TABLE_SIZE = 1e6;  //A prime roughly 10% larger
 
 //display for node string
 
@@ -64,9 +65,7 @@ public:
     void writeRawTag(genomeRegions &tagBed);
     bool readBed(const string &filename);
     bool readFasta(const string &filename);
-    
-    
-    
+   
 };
 
 /* dnaRegion comparison function */
@@ -107,11 +106,12 @@ void printProgress(const int i,const string& message);
 
 template <class T>
 ostream &operator<<( ostream &s, const vector<T> &v){
-    for (int i=0; i<v.size(); i++)
+    s<<"(";
+    for (int i=0; i<v.size()-1; i++)
     {
-        s<<v[i];
+        s<<v[i]<<",";
     }    
-    s<<endl;
+    s<<v.back()<<")"<<endl;
     return s;
 };
 
@@ -125,4 +125,7 @@ ostream &operator<<( ostream &s, const vector<vector<T> > &m){
     }
     return s;
 };
+
+float pow1(float base,int index);
+string antisense(const string& tempString);
 #endif

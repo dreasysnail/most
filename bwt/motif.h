@@ -15,26 +15,33 @@
 #include <math.h>
 #include "common.h"
 
+class Motif{
+    public:
+    int pwm[4][K];
+    string query;
+    int index;
+    vector<int> loci;
+    float signif;
+    vector<int> expMotifs;
+    //conserve score;
+    float score;
+    //index
+    Motif(int i):index(i),signif(0){query = translate(index);}
+    void fillMotif();
+    vector<int> explainMotif();
+    static string translate(int i);
+    void locateMotif(const char T[]);
+    void testMotifTag(const vector<int>& tag);
+    string antisense(const string& tempString);
+    bool ascending(int x[],const vector<int> &traverseP,int &travIndex);
+    static int motif[K_5];
+    void printMotif();
+};
 
 
 
 
-
-int getIndex();
-
-float fillMotif(const int index);
-
-string translate(const int index);
-
-float pow1(float base,int index);
-
-vector<int> locateMotif(string query,const char T[]);
-
-float testMotifTag(const vector<int> &loci,const vector<int>& tag);
-
-string antisense(const string& tempString);
-
-inline bool ascending(int x[],const vector<int> &traverseP,int &travIndex){
+inline bool Motif::ascending(int x[],const vector<int> &traverseP,int &travIndex){
     int tempIndex = travIndex;
     for (int i=0; i<traverseP.size(); i++) {
         x[traverseP[traverseP.size()-i-1]]=tempIndex%4+1;
@@ -48,9 +55,6 @@ inline bool ascending(int x[],const vector<int> &traverseP,int &travIndex){
     }
     return false;
 }
-
-
-
 
 
 

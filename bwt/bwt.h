@@ -16,6 +16,7 @@
 #include <string>
 #include <algorithm>
 #include "common.h"
+#include "motif.h"
 using std::cout;
 using std::cin;
 using std::cerr;
@@ -79,13 +80,18 @@ public :
     void Canonize();
 
     //my custom function
+    //restore searched motif-loci
+    std::vector<int> loci;
+    
     void AddPrefix(int last_char_index );
     int countString(const string &query );
     bool isExistString(const string &query);
     bool initialize();
     //static Node (*Nodes);
     //static Edge (*Edges);
-    void AddSuffixLink( int &last_parent, int parent);   
+    void AddSuffixLink( int &last_parent, int parent); 
+    vector<int> locateMotif(Motif& currentMotif);
+    void traverseLoci(int offset, int nodeIndex);
 
 
 };
@@ -211,7 +217,7 @@ int walk_tree( int start_node, int last_char_so_far );
 //
 // The default ctor for Edge just sets start_node
 // to the invalid value.  This is done to guarantee
-// that the hash table is initially filled with unused
+// that the hash table is initially fildled with unused
 // edges.
 //
 
@@ -224,7 +230,6 @@ ostream &operator<<( ostream &s, Aux &a );
 ostream &operator<<( ostream &s, const Edge &edge );
 ostream &operator<<( ostream &s, const Node &node );
 istream &operator>>( istream &s, Buffer &b );
-void dump_edges( Suffix s1 );
 void print_parents( ostream &s, int node);
 
 

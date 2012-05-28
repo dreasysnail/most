@@ -8,32 +8,52 @@
 
 
 #include "motif.h"
+#include "bwt.h"
 
 using namespace std;
 
-int motif[K_5]={0};
 int GenomeSize;
+int Motif::motif[K_5] = {0};
 
+void Motif::fillMotif(){
+    explainMotif();
+    vector<int>::iterator it;
+    int count=0;
+    float probThresh=pow1(0.25,K)*DELTA;
+    for (int i=0; i<K; i++){
+        if (query[i]=='_'){
+            probThresh *= 4;
+        }
+    }
+    for (it=expMotifs.begin(); it!=expMotifs.end();it++ ) {
+        count += motif[(*it)];
+    }     
+    if (count>probThresh*GenomeSize){
+        //        return count;
+    score = int(count*1000/probThresh/GenomeSize)/1000.0;
+    }
+    else {
+        score = 0;
+    }
+    
+}
 
-float fillMotif(const int index){
+vector<int> Motif::explainMotif(){
+    //find all possible explanation
     int tempIndex=index;
+    int query=0;
     int currentNum;
     int kmer[K]={0};
-    int count = 0;
-    int query=0;
-    int traverseIndex = 0;
+    int traverseIndex = 1;
     //for 0: 1-4 traverse
     vector<int> traversalPoint;
     int x[K]={0};
     //0:* 1:A 2:C 3:G 4:T 
-    float probThresh=pow1(0.25,K)*DELTA;
-    //    cout<<pow(0.25, K)<<endl;
     for (int i=0; i<K; i++){
         currentNum = tempIndex%5;
         kmer[K-i-1] = currentNum;
         tempIndex = int(tempIndex/5);
         if (currentNum==0){
-            probThresh *= 4;
             traversalPoint.push_back(K-i-1);
             x[K-i-1] = 1;
         }
@@ -49,49 +69,20 @@ float fillMotif(const int index){
             }
             
         }
-        count += motif[query];
+        expMotifs.push_back(query);
         query = 0;
         //if over
         
         if(ascending(x,traversalPoint,traverseIndex))
             break;
     }
-    
-    /* 
-    for (int j=0; j<(K_5); j++) {
-        int bitPos=K-1;
-        bool skip=false;
-        int query=j;
-        for (int i=0; i<K; i++){
-            currentNum = query%5;
-            query = int(query/5);
-            if (currentNum==0||(kmer[bitPos]!=0&&kmer[bitPos]!=currentNum)) {
-                skip = true;
-                break;
-            }
-            bitPos--;
-        }
-        if (skip) {
-            continue;
-        }
-        //if match
-        count += motif[j];   
-    }
-    */
-    motif[index] = count;
-    if (count>probThresh*GenomeSize) {
-        return int(count*1000/probThresh/GenomeSize)/1000.0;
-    }
-    else {
-        return 0;
-    }
-    
+    return expMotifs;
 }
 
 
-string translate(const int index){
+string Motif::translate(int i){
     string temp;
-    int query = index;
+    int query = i;
     int currentNum;
     for (int i=0; i<K; i++){
         currentNum = query%5;
@@ -119,25 +110,14 @@ string translate(const int index){
     return temp;
 }
 
-float pow1(float base,int index){
-    float pow = 1;
-    while (index>0) {
-        if (index%2==1) {
-            pow = pow * base;
-        }
-        base = base * base;
-        index = int(index/2);
-    }
-    return pow;
-}
-
-vector<int> locateMotif(string query,const char T[]){
-    vector<int> loci;
+void Motif::locateMotif(const char T[]){
+    //implement1 low efficiency
     bool flag = true;
-    //    cout<<GenomeSize<<endl;
+    loci.clear();
+    //cout<<GenomeSize<<endl;
     for (int i=0; i<GenomeSize; i++) {
         for (int index=0; index<query.size(); index++) {
-            if(query[index]!='_'&&T[i+index]!=query[index]){
+            if((query[index]!='_'&&T[i+index]!=query[index])||T[i+index]=='#'||T[i+index]=='N'){
                 flag = false;
                 break;
             }
@@ -148,57 +128,38 @@ vector<int> locateMotif(string query,const char T[]){
         else {
             flag = true;
         }
-    }
-    return loci;    
+    }     
 }
 
-float testMotifTag(const vector<int> &loci,const vector<int>& tag){
+
+
+
+
+
+void Motif::testMotifTag(const vector<int>& tag){
+    const int dist=20;
+	const int offset=2;
     float sumMotif=0;
     float sumAround=0;
     for (int i=0; i<loci.size(); i++) {
-        if (loci[i]<300||loci[i]>tag.size()-300) {
+        if (loci[i]<3*dist+K+offset||loci[i]>tag.size()-3*dist-2*K-1-offset) {
             continue;
         }
-        for (int j=-100; j<100; j++) {
+        for (int j=-dist; j<dist+K; j++) {
             sumMotif += tag[loci[i]+j];
         }
-        for (int j=-300; j<-100; j++) {
+        for (int j=-3*dist-K-offset; j<-dist-offset; j++) {
             sumAround += tag[loci[i]+j];
         }
-        for (int j=100; j<300; j++) {
+        for (int j=dist+K+offset; j<3*dist+2*K+offset; j++) {
             sumAround += tag[loci[i]+j];
         }
     }
-    //    cout<<sumMotif<<"\t"<<sumAround<<endl;
+    //   cout<<"summotif:"<<sumMotif<<"\tsumaround:"<<sumAround<<endl;
     float result = logf(sumMotif*2/sumAround);
-    return result>0?result:(-result);
+    signif = result>0?result:(-result);
 }
 
-string antisense(const string& tempString){
-    string output("");
-    for (int i=tempString.size()-1; i>=0; i--) {
-        switch (tempString[i]) {
-            case 'A':
-                output.push_back('T');
-                break;
-            case 'T':
-                output.push_back('A');
-                break;
-            case 'C':
-                output.push_back('G');
-                break;
-            case 'G':
-                output.push_back('C');
-                break;
-            case '#':
-                output.push_back('#');
-                break;
-            case 'N':
-                output.push_back('N');
-                break;
-            default:
-                break;
-        }
-    }
-    return output;
+void Motif::printMotif(){
+    cout<<query<<"\t"<<score<<"\t"<<signif<<endl;
 }

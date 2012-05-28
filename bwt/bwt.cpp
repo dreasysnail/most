@@ -12,7 +12,7 @@
 // resulting tree after creation.
 //
 #include "bwt.h"
-
+extern int GenomeSize;
 //
 // This is the hash table where all the currently
 // defined edges are stored.  You can dump out
@@ -103,8 +103,31 @@ Edge::Edge( int init_first, int init_last, int parent_node )
 //
 
 long int Edge::Hash( int node, int c )
-{
-    return ( ( node << 4 ) + c -34 ) % HASH_TABLE_SIZE;
+{   int offset;
+    switch (c) {
+        case 'A':
+            offset=1;
+            break;
+        case 'C':
+            offset=2;
+            break;
+        case 'G':
+            offset=3;
+            break;
+        case 'T':
+            offset=4;
+            break;
+        case 'N':
+            offset=5;
+            break;
+        case '#':
+            offset=6;
+            break;
+        default:
+            offset=c;
+            break;
+    }
+    return ( ( node << 3 ) + offset  ) % HASH_TABLE_SIZE;
 }
 
 //
@@ -260,7 +283,7 @@ int Edge::SplitEdge( Suffix &s )
 // hash table and printing out all used edges.  It
 // would be really great if I had some code that will
 // print out the tree in a graphical fashion, but I don't!
-//
+// ......
 /*
 
 void dump_edges( int current_n )
@@ -422,7 +445,7 @@ void Suffix::AddPrefix(int current_index )
 // of the input string.  The total number of branches from all
 // nodes should match the node count.
 //
-
+/*
 char CurrentString[ MAX_LENGTH ];
 char GoodSuffixes[ MAX_LENGTH ];
 char BranchCount[ MAX_LENGTH * 2 ] = { 0 };
@@ -507,6 +530,7 @@ int walk_tree( int start_node, int last_char_so_far )
     } else
         return 0;
 }
+*/
 
 /******   my custom function   *******/
 
@@ -521,7 +545,6 @@ int Suffix::countString(const string &query ){
     int currentNode = 0;
     int current_query_index = 0;
     int queryTemp;
-    
     while (current_query_index<query.size()) {
         Edge tempEdge = Edge::Find(currentNode,query[current_query_index]);
         // cout<<tempEdge<<endl;
@@ -535,7 +558,6 @@ int Suffix::countString(const string &query ){
                     return 0;
                 }
                 else {
-                    // return edgeString.size()==queryTemp?Nodes[tempEdge.end_node].leaf_count_beneath:Nodes[currentNode].leaf_count_beneath;
                     return Nodes[tempEdge.end_node].leaf_count_beneath;
                 }
             }
@@ -553,6 +575,78 @@ int Suffix::countString(const string &query ){
     }
     return -1;
 }
+
+
+vector<int> Suffix::locateMotif(Motif& currentMotif){
+    //implement2 find from edges walk tree
+    currentMotif.explainMotif();
+    vector<int>::iterator it;
+    loci.clear();
+    for (it=currentMotif.expMotifs.begin(); it!=currentMotif.expMotifs.end();it++ ) {
+        int currentNode = 0;
+        int current_query_index = 0;
+        int queryTemp;
+        std::string query = Motif::translate(*it);
+        while (current_query_index<query.size()) {
+            Edge tempEdge = Edge::Find(currentNode,query[current_query_index]);
+            // cout<<tempEdge<<endl;
+            //if find
+            if (tempEdge.start_node!=-1) {
+                string edgeString(&T[tempEdge.first_char_index],tempEdge.last_char_index-tempEdge.first_char_index+1);
+                //          cout<<T[tempEdge.first_char_index]<<edgeString<<endl;
+                queryTemp = query.size()-current_query_index;
+                if (edgeString.size()>=queryTemp){
+                    if (query.substr(current_query_index,queryTemp)!=edgeString.substr(0,queryTemp)) {
+                        break;
+                    }
+                    else {
+                        // return edgeString.size()==queryTemp?Nodes[tempEdge.end_node].leaf_count_beneath:Nodes[currentNode].leaf_count_beneath;
+                        if (Nodes[tempEdge.end_node].leaf_index!=-1){
+                            loci.push_back(GenomeSize - (current_query_index+tempEdge.last_char_index-tempEdge.first_char_index+1));
+                            break;
+                        }
+                        //traverse beneath nodes
+                        traverseLoci(current_query_index+edgeString.size(),tempEdge.end_node);
+                        break;
+                    }                    
+                }
+                else {
+                    if (query.substr(current_query_index,edgeString.size())!=edgeString) {
+                        break;
+                    }
+                    currentNode = tempEdge.end_node;
+                    current_query_index = current_query_index + edgeString.size();
+                }
+            }
+            else {
+                break;
+            }
+        }
+    }
+    return loci;
+}
+
+
+void Suffix::traverseLoci(int offset, int nodeIndex){
+    char token[6]={'A','T','C','G','N','#'};
+    
+    for (int i=0; i<6; i++) {
+        Edge edge = Edge::Find(nodeIndex, token[i]);
+        if (edge.start_node != -1){
+            if (Nodes[edge.end_node].leaf_index!=-1){
+                loci.push_back(GenomeSize - (offset+edge.last_char_index-edge.first_char_index+1));
+                continue;
+            }
+            else {
+                traverseLoci(offset+edge.last_char_index-edge.first_char_index+1,edge.end_node);
+                
+            }  
+        }
+    }    
+    return;
+}
+
+    
 
 bool Suffix::isExistString(const string &query){
     int currentNode = 0;

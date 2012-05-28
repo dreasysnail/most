@@ -23,7 +23,6 @@ extern int N;
 void printUsage();
 void printProgress(const int i,const string& message);
 extern int GenomeSize;
-extern int motif[K_5];
 extern Edge* Edges;
 extern Node* Nodes;
 void preInitialization(Edge* Edges,Node* Nodes);
@@ -31,10 +30,13 @@ int temp;
 
 int main(int argc, char **argv)
 {
+    clock_t tStart,t1,t2,t3,tEnd;
+    tStart=clock();
     Edge *EdgesTemp = new Edge[ HASH_TABLE_SIZE ];
     Node *NodesTemp = new Node[ MAX_LENGTH * 2 ];
     
     preInitialization(EdgesTemp,NodesTemp);
+    t1=clock();
     
     Suffix active( 0, 0, -1 );  // The initial active prefix
     while (true) {
@@ -43,7 +45,7 @@ int main(int argc, char **argv)
             exit(1);
         }
         if (argv[1][1]=='i'&&argc==4) {
-            //extend 300bp
+/*
             genomeRegions gR(0);
             gR.readBed(argv[2]);
             gR.readFasta(argv[3]);
@@ -88,6 +90,7 @@ int main(int argc, char **argv)
             delete [] EdgesTemp;
             delete [] NodesTemp;
             return 1;
+*/
         }
         
         
@@ -96,14 +99,16 @@ int main(int argc, char **argv)
         // tag mode
         if (argv[1][1]=='t'&&argc==5) {
             //extend 300bp
-            genomeRegions gR(300);
+            cerr<<"initialize:"<<double((t1-tStart)/1e6)<<endl;
+            genomeRegions gR(0);
             gR.readBed(argv[2]);
             gR.readFasta(argv[3]);
             genomeRegions tag(0);
             tag.readBed(argv[4]);
             gR.writeRawTag(tag);
             gR.getTagBed();
-            //?
+            
+            //initiate T and 
             vector<string>::iterator it;
             string tempString;
             for (it=gR.genomeSeqs.begin(); it!=gR.genomeSeqs.end(); it++) {
@@ -123,36 +128,50 @@ int main(int argc, char **argv)
             
             int tempGenomeSize=gR.genomeTags.size();
             cout<<"tagsize:"<<tempGenomeSize<<"\tgenomesize:"<<GenomeSize<<endl;
-            
-            
+            assert(GenomeSize==tempGenomeSize);
+            assert(GenomeSize<=MAX_LENGTH);
+            assert(GenomeSize*2<=HASH_TABLE_SIZE);
             N = strlen(T) - 1;
+            t2=clock();
             
+            cerr<<"built suffix tree:"<<double((t2-t1)/1e6)<<endl;
+            vector<Motif> allmotifs;
             for ( int i = 0 ; i <= N ; i++ )
                 active.AddPrefix(i);
             for (int i = 0; i <(K_5); i++) {
-                string query=translate(i);
-                motif[i]=active.countString(query);
-                temp+=motif[i];
+                Motif thisMotif(i);
+                allmotifs.push_back(thisMotif);
+                Motif::motif[i]=active.countString(thisMotif.query);
+                temp += Motif::motif[i];
                 printProgress(i,"find kmer from suffix tree:");
             }
             cout<<temp<<endl;
+            
+            
+            t3=clock();
+            cerr<<"count words:"<<double((t3-t2)/1e6)<<endl;
             cout<<"motif"<<"\tCONscore"<<"\tTAGscore"<<endl;
             for (int i =0; i <(K_5); i++) {
-                if (motif[i]!=0||i%5==0) {
+                if (Motif::motif[i]!=0||i%5==0) {
                     continue;
                 }
-                
-                float score = fillMotif(i);
-                if (score) {
+                allmotifs[i].fillMotif();
+                if (allmotifs[i].score) {
                     //loci for this motif
-                    vector<int> loci;
-                    string query=translate(i);
-                    loci = locateMotif(query,T);
-                    float signif = testMotifTag(loci,gR.genomeTags);
-                    cout<<translate(i)<<"\t"<<score<<"\t"<<signif<<endl;
+                    
+                    //allmotifs[i].locateMotif(T);
+                    allmotifs[i].loci = active.locateMotif(allmotifs[i]);
+                    allmotifs[i].testMotifTag(gR.genomeTags);
+                    allmotifs[i].printMotif();
                 }
                 // printProgress(i,"calculate motifs");
             }
+            tEnd=clock();
+            cerr<<"initialize:"<<double((t1-tStart)/1e6)<<endl;
+            cerr<<"built suffix tree:"<<double((t2-t1)/1e6)<<endl;
+            cerr<<"count words:"<<double((t3-t2)/1e6)<<endl;
+            cerr<<"add words:"<<double((tEnd-t3)/1e6)<<endl;
+            
             delete [] EdgesTemp;
             delete [] NodesTemp;
             return 1;
