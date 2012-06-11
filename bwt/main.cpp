@@ -13,6 +13,8 @@
 #include "bwt.h"
 #include "common.h"
 #include "motif.h"
+//for directory
+#include <cstdlib>
 
 using namespace std;
 
@@ -21,7 +23,6 @@ using namespace std;
 extern char T[ MAX_LENGTH ];
 extern int N;
 void printUsage();
-void printProgress(const int i,const string& message);
 extern int GenomeSize;
 extern Edge* Edges;
 extern Node* Nodes;
@@ -30,13 +31,15 @@ int temp;
 
 int main(int argc, char **argv)
 {
-    clock_t tStart,t1,t2,t3,tEnd;
+    clock_t tStart,t1,t2,t3,t4,tEnd;
     tStart=clock();
+    cerr<<"START MOTIF FINDING"<<endl;
     Edge *EdgesTemp = new Edge[ HASH_TABLE_SIZE ];
     Node *NodesTemp = new Node[ MAX_LENGTH * 2 ];
+    genomeRegions *gR = new genomeRegions(0);
     
     preInitialization(EdgesTemp,NodesTemp);
-    t1=clock();
+    
     
     Suffix active( 0, 0, -1 );  // The initial active prefix
     while (true) {
@@ -44,136 +47,180 @@ int main(int argc, char **argv)
             printUsage();
             exit(1);
         }
-        if (argv[1][1]=='i'&&argc==4) {
-/*
-            genomeRegions gR(0);
-            gR.readBed(argv[2]);
-            gR.readFasta(argv[3]);
-            vector<string>::iterator it;
-            string tempString;
-            for (it=gR.genomeSeqs.begin(); it!=gR.genomeSeqs.end(); it++) {
-                if ((*it)=="") {
-                    continue;
-                }
-                tempString += (*it)+"#";
-                transform(tempString.begin(), tempString.end(), tempString.begin(), ::toupper);
-                GenomeSize += (*it).size();
-                (*it).clear();
-            }
-           
-            //tempString = trimN(tempString);
-            strcpy(T,(tempString).c_str());
-            tempString.clear();
-            //cout<<T<<endl;
-            N = strlen(T) - 1;
-            
-            for ( int i = 0 ; i <= N ; i++ )
-                active.AddPrefix(i);
-            for (int i = 0; i <(K_5); i++) {
-                string query=translate(i);
-                motif[i]=active.countString(query);
-                 temp+=motif[i];
-                printProgress(i,"find kmer from suffix tree:");
-            }
-            cout<<temp<<endl;
-            for (int i =0; i <(K_5); i++) {
-                if (motif[i]!=0||i%5==0) {
-                    continue;
-                }
-                
-                float score = fillMotif(i);
-                if (score) {
-                    cout<<"motif:"<<translate(i)<<"\tscore:"<<score<<endl;
-                }
-            // printProgress(i,"calculate motifs");
-            }
-            delete [] EdgesTemp;
-            delete [] NodesTemp;
-            return 1;
-*/
-        }
-        
-        
-        
-        
+
         // tag mode
-        if (argv[1][1]=='t'&&argc==5) {
-            //extend 300bp
-            cerr<<"initialize:"<<double((t1-tStart)/1e6)<<endl;
-            genomeRegions gR(0);
-            gR.readBed(argv[2]);
-            gR.readFasta(argv[3]);
-            genomeRegions tag(0);
-            tag.readBed(argv[4]);
-            gR.writeRawTag(tag);
-            gR.getTagBed();
-            
-            //initiate T and 
-            vector<string>::iterator it;
-            string tempString;
-            for (it=gR.genomeSeqs.begin(); it!=gR.genomeSeqs.end(); it++) {
-                if ((*it)=="") {
-                    continue;
-                }
-                tempString += (*it)+"#";
-                transform(tempString.begin(), tempString.end(), tempString.begin(), ::toupper);
-                (*it).clear();
+        if (argv[1][1]=='t'&&argc==7) {
+            /************************
+            2:tss.bed
+            3:fasta
+            4:histone.wig/histone.bed
+            6:output directory
+            ************************/
+            string outPutDir(argv[6]); 
+            system(("rm -rf "+outPutDir).c_str());
+            if (system(("mkdir "+outPutDir).c_str()) != 0)
+            {
+                cerr<<"cannot make directory"<<endl;
+                exit(1);
             }
-            tempString += antisense(tempString)+"#";
-            strcpy(T,(tempString).c_str());
-            GenomeSize=tempString.size();
-            tempString.clear();
-            //cout<<T<<endl;
-            //cout<<gR.genomeTags<<endl;
+            //extend 300bp
             
-            int tempGenomeSize=gR.genomeTags.size();
-            cout<<"tagsize:"<<tempGenomeSize<<"\tgenomesize:"<<GenomeSize<<endl;
-            assert(GenomeSize==tempGenomeSize);
+
+            gR->readFasta(argv[3]);
+            
+            
+            
+            gR->readBed(argv[2]);
+            gR->mergeOverlap();
+            gR->getSeq(outPutDir);
+            
+            //region-wide
+            gR->initProb(2);
+            //initiate T 
+            cerr<<"regionFile（bedFormat）:"<<argv[2]<<endl;
+            GenomeSize = gR->catSeq(T);
+            string tagFileName(argv[4]);
+            //if tag file is wigfile
+            if (tagFileName.substr(tagFileName.size()-3,3)=="wig") {
+                cerr<<"tagfile（WigFormat）:"<<tagFileName<<endl;
+                gR->readWig(tagFileName);
+            }
+            else {
+                //problematic
+                genomeRegions tag(0);
+                cerr<<"tagfile（BedFormat）:"<<tagFileName<<endl;
+                tag.readBed(tagFileName);
+                gR->writeRawTag(tag);
+            }
+            //gR->getTagBed();
+            t1=clock();
+            cerr<<"initialize:"<<double((t1-tStart)/1e6)<<endl;
+
+
+            
+            
+            //ofstream tfile("aa.fa");
+            //tfile<<T<<endl;
+            //cout<<T<<endl;
+            //cout<<gR->genomeTags<<endl;
+            for (int i=0; i<gR->tagName.size(); i++) {
+                cerr<<gR->tagName[i]<<"size:"<<gR->genomeTags[gR->tagName[i]].size()<<"\t";
+                assert(GenomeSize==gR->genomeTags[gR->tagName[i]].size());
+            }
+            cerr<<"genomesize:"<<GenomeSize<<endl;
             assert(GenomeSize<=MAX_LENGTH);
             assert(GenomeSize*2<=HASH_TABLE_SIZE);
             N = strlen(T) - 1;
             t2=clock();
             
             cerr<<"built suffix tree:"<<double((t2-t1)/1e6)<<endl;
+            
+            //count words
             vector<Motif> allmotifs;
             for ( int i = 0 ; i <= N ; i++ )
                 active.AddPrefix(i);
             for (int i = 0; i <(K_5); i++) {
+                printProgress(i,K_5,"find kmer from suffix tree:");
                 Motif thisMotif(i);
                 allmotifs.push_back(thisMotif);
-                Motif::motif[i]=active.countString(thisMotif.query);
+                if (!allmotifs[i].noWildcard()) {
+                    continue;
+                }
+                //order null
+                allmotifs[i].initProb((*gR),-1);
+                allmotifs[i].loci = active.locateMotif(allmotifs[i],allmotifs);
+                Motif::motif[i]=allmotifs[i].loci.size();
+                //cout<<allmotifs[i].loci.size()<<" "<<active.countString(allmotifs[i].query)<<endl;
                 temp += Motif::motif[i];
-                printProgress(i,"find kmer from suffix tree:");
+                allmotifs[i].initPWM();
             }
-            cout<<temp<<endl;
+            cout<<endl<<"total motifs'loci size:"<<temp<<" approximate "<<GenomeSize<<endl;
             
             
             t3=clock();
-            cerr<<"count words:"<<double((t3-t2)/1e6)<<endl;
-            cout<<"motif"<<"\tCONscore"<<"\tTAGscore"<<endl;
+            //pwm file;
+            string fileName = outPutDir + "/allmotif.pwm";
+            ofstream pwmFile(fileName.c_str());
+            if (!pwmFile) {
+                string errorInfo = "Error! Fail to open pwmFile for writing!";
+                printAndExit(errorInfo);
+            }
+            delete [] EdgesTemp;
+            delete [] NodesTemp;
+            
+            cerr<<endl<<"count words:"<<double((t3-t2)/1e6)<<endl;
+            cout<<"Motif\tCONscore\t";
+            for (int i=0; i<gR->tagName.size(); i++) {
+                cout<<gR->tagName[i]<<"\t";
+                
+            }
+            cout<<"lociSize:"<<endl;
+            vector<Motif> significantMotifs;
             for (int i =0; i <(K_5); i++) {
-                if (Motif::motif[i]!=0||i%5==0) {
+                printProgress(i,K_5,"calculate wildcard motifs:");
+                if (Motif::motif[i]!=0||i%5==0||allmotifs[i].noWildcard()||allmotifs[i].wildcardNum()>K/2||allmotifs[i].implicit()||allmotifs[i].isRepeat()) {
                     continue;
                 }
-                allmotifs[i].fillMotif();
+                allmotifs[i].fillMotif(allmotifs);
                 if (allmotifs[i].score) {
                     //loci for this motif
                     
+                    
                     //allmotifs[i].locateMotif(T);
-                    allmotifs[i].loci = active.locateMotif(allmotifs[i]);
-                    allmotifs[i].testMotifTag(gR.genomeTags);
+                    allmotifs[i].loci = active.locateMotif(allmotifs[i],allmotifs);
+                    for (int j=0; j<gR->tagName.size(); j++) {
+                        allmotifs[i].testMotifTag(gR->genomeTags[gR->tagName[j]]);
+                    }
+                    
                     allmotifs[i].printMotif();
+                    if (allmotifs[i].signif[0]>SINGIFTHRESH&&allmotifs[i].score>SCORETHRESH) {
+                        //calPWM
+                        allmotifs[i].sumScore();
+                        allmotifs[i].calPWM(allmotifs);
+                        significantMotifs.push_back(allmotifs[i]);
+                    }
                 }
-                // printProgress(i,"calculate motifs");
+                
             }
+            t4 = clock();
+            cerr<<endl<<"add words:"<<double((t4-t3)/1e6)<<endl;
+            sort(significantMotifs.begin(), significantMotifs.end(),compareMotif());
+            fileName = outPutDir + "/motif.dist";
+            ofstream distFile(fileName.c_str());
+            cerr<<endl<<"Generate PWM and DIST file with top "<<significantMotifs.size()<<" motifs:"<<endl;
+            for (int i = 0; i<significantMotifs.size(); i++) {
+                printProgress(i,significantMotifs.size(), "");
+                pwmFile<<significantMotifs[i];
+#ifdef DRAW_MOTIF
+                int sum = 0;
+                
+                
+                for (vector<string>::iterator it=gR->tagName.begin(); it!=gR->tagName.end(); it++) {
+                    distFile<<">"<<significantMotifs[i].query<<"_Conscore_"<<significantMotifs[i].score<<"TotalScore"<<significantMotifs[i].overallScore<<"_Tag_"<<(*it)<<"\n";
+                    for (int l = -100; l<100; l++) {
+                        for (int j = 0; j<20; j++) {
+                            for (int k=0; k<significantMotifs[i].loci.size(); k++) {
+                                if (significantMotifs[i].loci[k]<2000||significantMotifs[i].loci[k]>GenomeSize-K-2000) {
+                                    continue;
+                                }
+                                sum += gR->genomeTags[*it][significantMotifs[i].loci[k]+l*20+j];
+                            }
+                        }
+                        distFile<<l*20<<"\t"<<sum<<"\n";
+                        sum = 0;
+                    }
+                }
+                
+                distFile<<endl;
+                
+#endif
+            }
+            delete gR;
             tEnd=clock();
-            cerr<<"initialize:"<<double((t1-tStart)/1e6)<<endl;
-            cerr<<"built suffix tree:"<<double((t2-t1)/1e6)<<endl;
-            cerr<<"count words:"<<double((t3-t2)/1e6)<<endl;
-            cerr<<"add words:"<<double((tEnd-t3)/1e6)<<endl;
+            cerr<<"Write dist&PWM:"<<double((tEnd-t4)/1e6)<<endl;
+            cerr<<"total time eclapse:"<<double((tEnd-tStart)/1e6)<<endl;
             
-            delete [] EdgesTemp;
-            delete [] NodesTemp;
+
             return 1;
         }
 
@@ -202,7 +249,7 @@ int main(int argc, char **argv)
             
             //display
             for(int i=0;i<Node::Count;i++){
-                cout<<i<<"   "<<Nodes[i].father<<"   "<<Nodes[i].leaf_index<<"   "<<Nodes[i].suffix_node<<"    "<<Nodes[i].leaf_count_beneath<<endl;
+                cout<<i<<"   "<<Nodes[i].father<<"   "<<Nodes[i].leaf_index<<"   "<<Nodes[i].suffix_node<<"    "<<endl;
                 //         Nodes[i].showNodeString();
                 
                 
@@ -252,6 +299,7 @@ void printUsage()
     usage		+=	"    -t --file\t<bed file>\t<DNA sequence file>\n\t<tag bed file>\tPredict on DNA sequences\n\n";
 	usage		+=	"    -h --help\n\t\tPrint help information.\n";
     usage		+=	"    -d --debug\n\t\trun some test.\n";
+    usage		+=	"    ATTENTION:LAST FILE SHOULD BE SORTED";
 	cout<<usage<<endl;
     
     cout << "Normally, suffix trees require that the last\n"
@@ -268,4 +316,5 @@ void printUsage()
 void preInitialization(Edge* EdgesTemp,Node* NodesTemp){
     Nodes = NodesTemp;
     Edges = EdgesTemp;
+
 }

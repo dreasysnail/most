@@ -75,7 +75,7 @@ Edge::Edge( int init_first, int init_last, int parent_node )
     Nodes[end_node].father=start_node;
     
     //custom(icarus)
-    Nodes[end_node].leaf_count_beneath=1;
+    // Nodes[end_node].leaf_count_beneath=1;
 #ifdef display 
     Nodes[end_node].above_edge_first_char_index=init_first;
     //initialize new node's char index
@@ -140,6 +140,8 @@ long int Edge::Hash( int node, int c )
 
 void Edge::Insert()
 {
+    //truncate # and N
+    //   if (start_node==0&&(T[ first_char_index ]=='#'||T[ first_char_index ]=='N'))        return;
     long int i = Hash( start_node, T[ first_char_index ] );
     while ( Edges[ i ].start_node != -1 )
         i = ++i % HASH_TABLE_SIZE;
@@ -399,12 +401,13 @@ void Suffix::AddPrefix(int current_index )
         Nodes[new_edge->end_node].leaf_index=Node::Leaf++;
         
         //update leaf_count_beneath for upper node(icarus)
+        /*
         int fatherNode = parent_node;
         while (fatherNode!=0) {
             Nodes[fatherNode].leaf_count_beneath++;
             fatherNode = Nodes[fatherNode].father;
         }
-        
+        */
         
         if ( last_parent_node > 0 )
             Nodes[ last_parent_node ].suffix_node = parent_node;
@@ -540,11 +543,13 @@ void Node::showNodeString(){
     
 }
 
-
+/*
 int Suffix::countString(const string &query ){
+    
     int currentNode = 0;
     int current_query_index = 0;
     int queryTemp;
+    
     while (current_query_index<query.size()) {
         Edge tempEdge = Edge::Find(currentNode,query[current_query_index]);
         // cout<<tempEdge<<endl;
@@ -575,18 +580,28 @@ int Suffix::countString(const string &query ){
     }
     return -1;
 }
+*/
 
-
-vector<int> Suffix::locateMotif(Motif& currentMotif){
+vector<int> Suffix::locateMotif(Motif& currentMotif,const std::vector<Motif>& allmotifs){
     //implement2 find from edges walk tree
     currentMotif.explainMotif();
-    vector<int>::iterator it;
     loci.clear();
-    for (it=currentMotif.expMotifs.begin(); it!=currentMotif.expMotifs.end();it++ ) {
+    
+    //if has wildcard
+    if (currentMotif.expMotifs.size()>1) {
+        assert(!currentMotif.noWildcard());
+        for (int i=0; i<currentMotif.expMotifs.size();i++ ) {
+            loci.insert(loci.end(),allmotifs[currentMotif.expMotifs[i]].loci.begin(), allmotifs[currentMotif.expMotifs[i]].loci.end());
+        }
+        return loci;
+    }
+    //if no wildcard
+    else {
+        //cout<<currentMotif.expMotifs<<endl;
         int currentNode = 0;
         int current_query_index = 0;
         int queryTemp;
-        std::string query = Motif::translate(*it);
+        string query = currentMotif.query;
         while (current_query_index<query.size()) {
             Edge tempEdge = Edge::Find(currentNode,query[current_query_index]);
             // cout<<tempEdge<<endl;
@@ -622,8 +637,8 @@ vector<int> Suffix::locateMotif(Motif& currentMotif){
                 break;
             }
         }
-    }
     return loci;
+    }       
 }
 
 

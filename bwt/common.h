@@ -16,17 +16,30 @@
 #include <algorithm>
 #include <map>
 
+
 //define motif length
-//#define K 10
-//#define K_5 9765625
-#define K 5
-#define K_5 3125
-#define DELTA 2
-#define PSEUDO 0.001
+#define K 9
+#define K_5 1953125
+//#define K 5
+//#define K_5 3125
+#define DELTA 4
+//#define PSEUDO 0.001
+//#define MAXGENOME 2000000
+#define SAMPLESIZE 5
 //200M
 const long int MAX_LENGTH = 1e6;
 const long int HASH_TABLE_SIZE = 1e6;  //A prime roughly 10% larger
+//tag counter parameters
+const int dist=100;     //range               
+const int offset1=100;    //gap
+const int offset=20;    //gap
+const float SINGIFTHRESH = 2;
+const float SCORETHRESH =5;
 
+
+
+#undef OUTFASTA
+#define DRAW_MOTIF
 //display for node string
 
 #undef display
@@ -52,18 +65,34 @@ public:
     genomeRegions(int num):extend(num){};
     vector <genomeRegion> genomes;
     //final seqs
-    vector <string> genomeSeqs;
+    map<string,string> genomeSeqs;
     //final tags
-    vector <int> genomeTags;
+    map<string,vector <int> > genomeTags;
+    //genome prob for trans and single site
+    float prob[5][4];
+    //total size of each genome(<200M).
+    map <string,int> genomeLength;
     map <string,string> rawGenome;
-    map <string,vector<int> > rawTag;
+    map <string,map<string,vector<int> > > rawTag;
+    vector<string> chromeNames;
+    vector<string> tagName;
+
     int extend;
-    void getSeq();
-    void getTagBed();    //get 0-1 sequence from bed file
-    void appendTag(int a,int b,const string& chr);
+    void getSeq(const string& outPutDir);
+    void inline writeSeq(ostream &outFile,int startP,int endP,string &currentChr);
+    int catSeq(char* T);
+    void getTagBed(const string& thisHistone,const string& currentChr );    //get 0-1 sequence from bed file
+    void appendTag(int a,int b,const string& chr,const string& thisHistone);
     void appendReverse();
+    void initProb(int mode);
+    bool existChr(const string& chr){return find(chromeNames.begin(),chromeNames.end(),chr)==chromeNames.end()?false:true;}
+    void printProb();
     void writeRawTag(genomeRegions &tagBed);
+    void mergeOverlap();
     bool readBed(const string &filename);
+    //read and write rawTag;
+    bool readWig(const string &filename);
+    
     bool readFasta(const string &filename);
    
 };
@@ -102,10 +131,14 @@ inline string trimN(string &temp){
     return result;
 }
 
-void printProgress(const int i,const string& message);
+void printProgress(const int i,const int total,const string& message);
 
 template <class T>
 ostream &operator<<( ostream &s, const vector<T> &v){
+    if (v.size()==0){
+        s<<"NULL vector"<<endl;
+        return s;
+    }
     s<<"(";
     for (int i=0; i<v.size()-1; i++)
     {
@@ -126,6 +159,20 @@ ostream &operator<<( ostream &s, const vector<vector<T> > &m){
     return s;
 };
 
+inline int alp2num(const char& name){
+    switch (name) {
+        case 'A':
+            return 0;
+        case 'C':
+            return 1;
+        case 'G':
+            return 2;
+        case 'T':
+            return 3;
+        default:
+            return -1;
+    }
+}
 float pow1(float base,int index);
 string antisense(const string& tempString);
 #endif
