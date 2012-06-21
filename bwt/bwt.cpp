@@ -584,14 +584,14 @@ int Suffix::countString(const string &query ){
 
 vector<int> Suffix::locateMotif(Motif& currentMotif,const std::vector<Motif>& allmotifs){
     //implement2 find from edges walk tree
-    currentMotif.explainMotif();
+    //currentMotif.explainMotif();
     loci.clear();
     
-    //if has wildcard
-    if (currentMotif.expMotifs.size()>1) {
-        assert(!currentMotif.noWildcard());
+    //if has wildcard or cluster
+    if (!currentMotif.noWildcard()||currentMotif.index==-1) {
         for (int i=0; i<currentMotif.expMotifs.size();i++ ) {
             loci.insert(loci.end(),allmotifs[currentMotif.expMotifs[i]].loci.begin(), allmotifs[currentMotif.expMotifs[i]].loci.end());
+            //cout<<"+"<<Motif::translate(currentMotif.expMotifs[i])<<allmotifs[currentMotif.expMotifs[i]].loci.size()<<"="<<loci.size()<<endl;
         }
         return loci;
     }

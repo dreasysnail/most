@@ -20,9 +20,9 @@
 //define motif length
 #define K 9
 #define K_5 1953125
-//#define K 5
-//#define K_5 3125
-#define DELTA 4
+//#define K 7
+//#define K_5 78125
+#define DELTA 2
 //#define PSEUDO 0.001
 //#define MAXGENOME 2000000
 #define SAMPLESIZE 5
@@ -30,15 +30,20 @@
 const long int MAX_LENGTH = 1e6;
 const long int HASH_TABLE_SIZE = 1e6;  //A prime roughly 10% larger
 //tag counter parameters
-const int dist=100;     //range               
+const int dist=1;     //range               
 const int offset1=100;    //gap
-const int offset=20;    //gap
-const float SINGIFTHRESH = 2;
-const float SCORETHRESH =5;
+const int offset=2;    //gap
+//const float SINGIFTHRESH = 2;
+//const float SCORETHRESH =5;
 
-
-
-#undef OUTFASTA
+//cluster
+const int CLUSTERMAX = 25;
+const int MOTIFMAX = 150;
+const int MAXDISTANCE = 12;
+const int SHIFT = 2;
+const int MAXCLUSTERSIZE = 20;
+const int MAXREPEATCNT = 2;
+#define OUTFASTA
 #define DRAW_MOTIF
 //display for node string
 
@@ -67,13 +72,13 @@ public:
     //final seqs
     map<string,string> genomeSeqs;
     //final tags
-    map<string,vector <int> > genomeTags;
+    map<string,vector <short int> > genomeTags;
     //genome prob for trans and single site
     float prob[5][4];
     //total size of each genome(<200M).
     map <string,int> genomeLength;
     map <string,string> rawGenome;
-    map <string,map<string,vector<int> > > rawTag;
+    map <string,map<string,vector<short int> > > rawTag;
     vector<string> chromeNames;
     vector<string> tagName;
 
@@ -96,13 +101,12 @@ public:
     bool readFasta(const string &filename);
    
 };
-
+bool chrCompare(const string& chr1,const std::string &chr2);
 /* dnaRegion comparison function */
 inline bool compareGenome(genomeRegion gr1, genomeRegion gr2)
 {   
-    int isFirstBigger = gr1.chr.compare(gr2.chr);
-    if (isFirstBigger!=0) {
-        return isFirstBigger>0?false:true;
+    if (gr2.chr!=gr1.chr) {
+        return chrCompare(gr1.chr,gr2.chr);;
     }
 	return (gr1.startP<gr2.startP);
 }
@@ -169,10 +173,36 @@ inline int alp2num(const char& name){
             return 2;
         case 'T':
             return 3;
+        case 'M':
+            return 4;
+        case 'R':
+            return 5;
+        case 'W':
+            return 6;
+        case 'S':
+            return 7;
+        case 'Y':
+            return 8;
+        case 'K':
+            return 9;
+        case 'B':
+            return 10;
+        case 'D':
+            return 11;
+        case 'H':
+            return 12;
+        case 'V':
+            return 13;
+        case 'N':
+            return 14;      
         default:
             return -1;
     }
 }
+
+
 float pow1(float base,int index);
 string antisense(const string& tempString);
+char degenerate(char a,char b);
+
 #endif

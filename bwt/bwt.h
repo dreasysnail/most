@@ -149,11 +149,11 @@ public :
     
     //my custome variance
 #ifdef display
-      int my_node_index;    
-      int first_char_index;
-      int last_char_index;
-      int above_edge_first_char_index;
-      int leaf_count_beneath;
+    //      int my_node_index;    
+    //  int first_char_index;
+    //  int last_char_index;
+    // int above_edge_first_char_index;
+    //  int leaf_count_beneath;
 #endif    
     
 

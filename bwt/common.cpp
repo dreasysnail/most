@@ -9,6 +9,8 @@
 #include "common.h"
 #include "motif.h"
 #include <cassert>
+#include <stdio.h>
+#include <stdlib.h>
 using namespace std;
 
 
@@ -45,6 +47,7 @@ bool genomeRegions::readBed(const string &filename){
 }
 //simple function ,less api
 bool genomeRegions::readWig(const string &filename){
+    //already have bed and fasta, slice and paste tag for each chrome for each histone
     ifstream wigFile(filename.c_str());
     //assume sorted wig file
     if (!wigFile) {
@@ -78,18 +81,21 @@ bool genomeRegions::readWig(const string &filename){
                 tagName.push_back(temptagName);
                 cerr<<"find Tag "<<tagName.back()<<" You'd better contain histone=**"<<endl;
             }
-            //check histone contains all chrome info that is needed
             
-             
+            
+            //check else and put last histone's last chr 
             if (thisHistone!="") {
+                getTagBed(thisHistone,currentChr);
+                //check histone contains all chrome info that is needed
                 for (vector<string>::iterator fastaIt=chromeNames.begin(); fastaIt!=chromeNames.end(); fastaIt++) {
-                    if (rawTag[thisHistone].count(*fastaIt)<=0) {
+                    
+                    if (rawTag[thisHistone].find(*fastaIt)==rawTag[thisHistone].end()) {
                         cerr<<"WARNING:"<<thisHistone<<" in TagFile doesn't contain chrome "<<(*fastaIt)<<" appears in fastaFile"<<endl;
                         rawTag[thisHistone][*fastaIt].assign(genomeLength[*fastaIt], 0);
                         getTagBed(thisHistone,*fastaIt);
                     }
                 }
-                getTagBed(thisHistone,currentChr);
+                
             }
 
             
@@ -120,10 +126,29 @@ bool genomeRegions::readWig(const string &filename){
 		segment.endP = segment.startP + wigStep;
         ss>>temp;
         int score = atof(temp.c_str())*4;
+        //find new chr  push old and detect lack
         if (segment.chr!=currentChr) {
+            //push old
             if (currentChr!="") {
+                //put last one
                 getTagBed(thisHistone,currentChr);
+                //check histone contains all chrome info that is needed
+                vector<string>::iterator from,to;
+                from  = find (chromeNames.begin(), chromeNames.end(), currentChr)+1;
+                to  = find (chromeNames.begin(), chromeNames.end(), segment.chr);
+                if (from!=to) {
+                    for (vector<string>::iterator fastaIt=from; fastaIt!=to; fastaIt++) {
+                        if (rawTag[thisHistone].find(*fastaIt)==rawTag[thisHistone].end()) {
+                            cerr<<"WARNING:"<<thisHistone<<" in TagFile doesn't contain chrome "<<(*fastaIt)<<" appears in fastaFile"<<endl;
+                            rawTag[thisHistone][*fastaIt].assign(genomeLength[*fastaIt], 0);
+                            getTagBed(thisHistone,*fastaIt);
+                        }
+                    }
+                }
             }
+            
+            
+            
             currentChr = segment.chr;
             //or find  != .end()
             if (rawTag[thisHistone].count(currentChr)) {
@@ -133,15 +158,24 @@ bool genomeRegions::readWig(const string &filename){
             }
             //cout<<line<<currentChr<<endl;
             
+            
+            
 
-            rawTag[thisHistone][currentChr].assign(genomeLength[currentChr], 0);            
+            rawTag[thisHistone][currentChr].assign(genomeLength[currentChr], 0);  
+            //cout<<currentChr<<genomeLength[currentChr]<<endl;
         }
         if (score<=0) {
             continue;
         }
+        if (segment.startP-1<=0||segment.endP>genomeLength[currentChr]) {
+            continue;
+        }
+        //for performance
+        vector<short int> &tempMap=rawTag[thisHistone][currentChr];
         for (int j=segment.startP-1; j<segment.endP; j++) {
-            rawTag[thisHistone][currentChr][j]+=score;
-            //            cout<<j;
+            
+            tempMap[j]+=score;
+        //            cout<<j;
         }
         
     }
@@ -202,23 +236,25 @@ void genomeRegions::getSeq(const string& outPutDir){
     string fileName = outPutDir+"/allregions.fa";
     ofstream regionFile(fileName.c_str());
     vector<genomeRegion>::iterator it;
-    
+    //chr1-chr19-chrX
     for (it = genomes.begin(); it!=genomes.end(); it++) {
         writeSeq(regionFile,it->startP,it->endP,it->chr);
     }
     //clear memory
+    sort(chromeNames.begin(), chromeNames.end(),chrCompare);
     for (vector<string>::iterator it=chromeNames.begin(); it!=chromeNames.end(); it++) {
         genomeLength[*it] = rawGenome[*it].size();
         string tempS("");
         rawGenome[*it].swap(tempS);
     }
     
-    //output is also sorted
+    //output is also pasted sorted chr1-chrn
     
 }
 
 
 void inline genomeRegions::writeSeq(ostream &outFile,int startCut,int endCut,string &currentChr){
+    //cout<<currentChr<<" "<<startCut<<" "<<endCut<<" "<<rawGenome[currentChr].substr(startCut,endCut-startCut+1)<<endl;
     try {
         if (endCut<=startCut+1) {
             return;
@@ -228,10 +264,11 @@ void inline genomeRegions::writeSeq(ostream &outFile,int startCut,int endCut,str
     #ifdef OUTFASTA
         outFile<<">"<<currentChr<<":"<<startCut<<"-"<<endCut<<"\n";
         for (int i = startCut; i<endCut; i+=50) {
-            outFile<<rawGenome[currentChr].substr(i,50)<<"\n";
             if (i+50 > endCut) {
                 outFile<<rawGenome[currentChr].substr(i,endCut-i)<<"\n";
+                break;
             }
+            outFile<<rawGenome[currentChr].substr(i,50)<<"\n";
         }
         outFile<<endl;
     #endif
@@ -244,13 +281,13 @@ void inline genomeRegions::writeSeq(ostream &outFile,int startCut,int endCut,str
 }
 
 int genomeRegions::catSeq(char* T){
-    map<string, string>::iterator chrit;
+    vector<string>::iterator chrit;
     long int offset=0;
     string tempString("");
-    for (chrit=genomeSeqs.begin(); chrit!=genomeSeqs.end(); chrit++) {
-        tempString += chrit->second;
+    for (chrit=chromeNames.begin(); chrit!=chromeNames.end(); chrit++) {
+        tempString += genomeSeqs[*chrit];
         string tempS("");
-        chrit->second.swap(tempS);
+        genomeSeqs[*chrit].swap(tempS);
     }
     tempString += antisense(tempString)+"#";
     offset = tempString.size();
@@ -265,15 +302,15 @@ int genomeRegions::catSeq(char* T){
 
 void genomeRegions::writeRawTag(genomeRegions &tagBed){
     //sort tagBed
-    sort(tagBed.genomes.begin(), tagBed.genomes.end(), compareGenome);
+    //sort(tagBed.genomes.begin(), tagBed.genomes.end(), compareGenome);
     string currentChr("");
     string thisHistone = "bed";
-    map<string, vector<int> > tempMap;
+    map<string, vector<short int> > tempMap;
     rawTag[thisHistone] = tempMap;
     for (int i=0; i<tagBed.genomes.size(); i++) {
         if (tagBed.genomes[i].chr!=currentChr) {
             currentChr = tagBed.genomes[i].chr;
-            vector<int> temp;
+            vector<short int> temp;
             if (rawTag[thisHistone].count(currentChr)) {
                 string errorInfo = "Error! chrome "+currentChr+" information collides in Tag file\n";
                 cout<<errorInfo;
@@ -377,7 +414,7 @@ void genomeRegions::getTagBed(const string& thisHistone,const string& currentChr
         }
     }
     //clear memory
-    vector<int> tempV;
+    vector<short int> tempV;
     rawTag[thisHistone][currentChr].swap(tempV);
 }
 
@@ -406,7 +443,7 @@ void genomeRegions::appendTag(int a,int b,const string& chr,const string& thisHi
 void genomeRegions::appendReverse(){
     for (vector<string>::iterator tagIt=tagName.begin(); tagIt!=tagName.end(); tagIt++) {
         string thisHistone = *tagIt;
-        vector<int> temp(genomeTags[thisHistone]);
+        vector<short int> temp(genomeTags[thisHistone]);
         reverse(temp.begin(), temp.end());
         copy(temp.begin(), temp.end(),back_inserter(genomeTags[thisHistone]));
         genomeTags[thisHistone].push_back(0);
@@ -514,6 +551,194 @@ string antisense(const string& tempString){
         }
     }
     return output;
+}
+
+char degenerate(char a,char b){
+    //assert
+    assert(a=='A'||a=='C'||a=='G'||a=='T');
+    switch (a) {
+        case 'A':
+            switch (b) {
+                case 'A':
+                    return 'A';    
+                case 'C':
+                    return 'M';
+                case 'G':
+                    return 'R';
+                case 'T':
+                    return 'W';
+                case 'M':
+                    return 'M';
+                case 'R':
+                    return 'R';
+                case 'W':
+                    return 'W';
+                case 'S':
+                    return 'V';
+                case 'Y':
+                    return 'H';
+                case 'K':
+                    return 'D';
+                case 'B':
+                    return 'N';
+                case 'D':
+                    return 'D';
+                case 'H':
+                    return 'H';
+                case 'V':
+                    return 'V';
+                case 'N':
+                    return 'N';
+                default:
+                    break;
+            }
+            break;
+        
+        case 'C':
+            switch (b) {
+                case 'A':
+                    return 'M';    
+                case 'C':
+                    return 'C';
+                case 'G':
+                    return 'S';
+                case 'T':
+                    return 'Y';
+                case 'M':
+                    return 'M';
+                case 'R':
+                    return 'V';
+                case 'W':
+                    return 'H';
+                case 'S':
+                    return 'S';
+                case 'Y':
+                    return 'Y';
+                case 'K':
+                    return 'B';
+                case 'B':
+                    return 'B';
+                case 'D':
+                    return 'N';
+                case 'H':
+                    return 'H';
+                case 'V':
+                    return 'V';
+                case 'N':
+                    return 'N';
+                default:
+                    break;
+            }
+            break;
+            
+        case 'G':
+            switch (b) {
+                case 'A':
+                    return 'R';    
+                case 'C':
+                    return 'S';
+                case 'G':
+                    return 'G';
+                case 'T':
+                    return 'K';
+                case 'M':
+                    return 'V';
+                case 'R':
+                    return 'R';
+                case 'W':
+                    return 'D';
+                case 'S':
+                    return 'S';
+                case 'Y':
+                    return 'B';
+                case 'K':
+                    return 'K';
+                case 'B':
+                    return 'B';
+                case 'D':
+                    return 'D';
+                case 'H':
+                    return 'N';
+                case 'V':
+                    return 'V';
+                case 'N':
+                    return 'N';
+                default:
+                    break;
+            }
+            break;
+            
+        case 'T':
+            switch (b) {
+                case 'A':
+                    return 'W';    
+                case 'C':
+                    return 'Y';
+                case 'G':
+                    return 'K';
+                case 'T':
+                    return 'T';
+                case 'M':
+                    return 'H';
+                case 'R':
+                    return 'D';
+                case 'W':
+                    return 'W';
+                case 'S':
+                    return 'B';
+                case 'Y':
+                    return 'Y';
+                case 'K':
+                    return 'K';
+                case 'B':
+                    return 'B';
+                case 'D':
+                    return 'D';
+                case 'H':
+                    return 'H';
+                case 'V':
+                    return 'N';
+                case 'N':
+                    return 'N';
+                default:
+                    break;
+            }
+            break;
+            
+        default:
+            break;
+    }
+    return '_';
+}
+
+bool chrCompare(const string& chr1,const std::string &chr2){
+    int num1,num2;
+    if (chr1.find("X")!=chr1.npos) {
+        num1='X';
+    }
+    else if (chr1.find("Y")!=chr1.npos) {
+        num1='Y';
+    }
+    else if (chr1.find("M")!=chr1.npos) {
+        num1='M';
+    }
+    else {
+        num1=atoi(chr1.substr(3,chr1.size()-3).c_str());
+    }
+    
+    if (chr2.find("X")!=chr2.npos) {
+        num2='X';
+    }
+    else if (chr2.find("Y")!=chr2.npos) {
+        num2='Y';
+    }
+    else if (chr2.find("M")!=chr2.npos) {
+        num2='M';
+    }
+    else {
+        num2=atoi(chr2.substr(3,chr2.size()-3).c_str());
+    }
+    return num1<num2;
 }
 
 

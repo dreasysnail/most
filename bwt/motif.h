@@ -13,40 +13,64 @@
 #include <algorithm>
 #include <vector>
 #include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
+//#include <stdio.h>
+//#include <stdlib.h>
 #include "common.h"
 using std::cout;
 using std::endl;
 class Motif{
     public:
-    int pwm[4][K];
     string query;
-    char queryNum[K];
+    //char alp2num(query[i-1])[K];
     int index;
-    bool overThresh;
+    vector<int> pwm[4];
+    //bool overThresh;
     vector<int> loci;
     vector<float> signif;
     float probThresh;
     vector<int> expMotifs;
+    std::vector<string> Clusterexp;
     //conserve score;
     float score;
     float overallScore;
     //index
-    Motif(int i):index(i),overallScore(0),score(0),probThresh(0),overThresh(false)
+    Motif(int i):index(i),overallScore(0),score(0),probThresh(0)
                 {query = translate(index);
-                 memset(pwm, 0, sizeof(int [4][K]));}
+                pwm[0].assign(K, 0);
+                pwm[1].assign(K, 0);
+                pwm[2].assign(K, 0);
+                pwm[3].assign(K, 0);
+                }
     void fillMotif(const vector<Motif>& allmotifs);
     vector<int> explainMotif();
     
     void locateMotif(const char T[]);
-    void testMotifTag(const vector<int>& tag);
+    void testMotifTag(genomeRegions &gR,const string& outPutDir);
     //order 0 order 1 
     void initProb(const genomeRegions& gR,int order);
     void initPWM();
-    void calPWM(const vector<Motif>& allmotifs);
+    //void calPWM(const vector<Motif>& allmotifs);
+    void calConscore(int nSize){
+        float Thresh = probThresh*nSize*DELTA;
+        if (loci.size()>Thresh){
+            score = int(loci.size()*1000/Thresh)/1000.0;
+        }
+        else {
+            score = 0;
+        }
+    };
     string antisense(const string& tempString);
-    bool ascending(int x[],const vector<int> &traverseP,int &travIndex);
+    bool ascending(vector<char> &x,const vector<int> &traverseP,int &travIndex);
+    //clustering methods
+    std::pair<int,int> editDistance(const Motif& cluster);
+
+    
+    void concatenate(const Motif& m,int index ,int optimShift);
+    void calPWM(const Motif& m,int optimShift);
+    void trim();
+    
+    
+    //inlines
     inline bool noWildcard();
     inline int wildcardNum();
     //if its counterpart's (e.g. A*TTA <=>TAA*T ) string is smaller then it's implicit
@@ -54,27 +78,33 @@ class Motif{
     inline bool isRepeat();
     void sumScore();
     static int motif[K_5];
+    static int distance[4][15];
+
+    
+    
     //print info
     void inline printMotif();
     
     
     
     
-    inline string translate(int i);
+    inline static string translate(int i);
 };
+
+
 
 
 
 inline bool Motif::noWildcard(){
     for (int i=0; i<K; i++) 
-        if (query[i]=='*') 
+        if (query[i]=='N') 
             return false;
     return true;
 }
 
 inline bool Motif::implicit(){
     //first it has a different counterpart
-    if (query[K-1]=='*'||::antisense(query)>=query) {
+    if (::antisense(query)>=query) {
         return false;
     }
     else {
@@ -83,8 +113,12 @@ inline bool Motif::implicit(){
 }
 
 inline bool Motif::isRepeat(){
+    int counter = 0;
     for (int i=1; i<K; i++) {
-        if (query[i]!='*'&&query[i]!=query[0]) {
+        if (query[i]!=query[0]) {
+            counter++;
+        }
+        if (counter>=MAXREPEATCNT) {
             return false;
         }
     }
@@ -94,7 +128,7 @@ inline bool Motif::isRepeat(){
 inline int Motif::wildcardNum(){
     int count=0;
     for (int i=0; i<K; i++) 
-        if (query[i]=='*') 
+        if (query[i]=='N') 
             count++;
     return count;
 }
@@ -104,11 +138,17 @@ inline int Motif::wildcardNum(){
 class compareMotif {
 public:
     bool operator()(Motif m1, Motif m2){
-        //return m1.score>m2.score;
-        return m1.overallScore>m2.overallScore;
+        return m1.score>m2.score;
+        //return m1.overallScore>m2.overallScore;
     }
 };
 
+class compareCluster {
+public:
+    bool operator()(Motif m1, Motif m2){
+        return m1.overallScore>m2.overallScore;
+    }
+};
 /*
 inline bool compareMotif(Motif m1, Motif m2)
 {   
@@ -120,7 +160,7 @@ inline bool compareMotif(Motif m1, Motif m2)
 */
 
 inline string Motif::translate(int query){
-    string temp;
+    string tempS("");
     char currentNum;
     
     for (int i=0; i<K; i++){
@@ -128,32 +168,32 @@ inline string Motif::translate(int query){
         query = int(query/5);
         switch (currentNum) {
             case 0:
-                temp.push_back('*');
-                queryNum[i]=-1;
+                tempS.push_back('N');
+                //alp2num(query[i-1])[i]=-1;
                 break;
             case 1:
-                temp.push_back('A');
-                queryNum[i]=0;
+                tempS.push_back('A');
+                //alp2num(query[i-1])[i]=0;
                 break;
             case 2:
-                temp.push_back('C');
-                queryNum[i]=1;
+                tempS.push_back('C');
+                //alp2num(query[i-1])[i]=1;
                 break;
             case 3:
-                temp.push_back('G');
-                queryNum[i]=2;
+                tempS.push_back('G');
+                //alp2num(query[i-1])[i]=2;
                 break;
             case 4:
-                temp.push_back('T');
-                queryNum[i]=3;
+                tempS.push_back('T');
+                //alp2num(query[i-1])[i]=3;
                 break;
             default:
-                queryNum[i]=-1;
+                //alp2num(query[i-1])[i]=-1;
                 break;
         }
 
     }
-    return temp;
+    return tempS;
 }
 
 void inline Motif::printMotif(){
