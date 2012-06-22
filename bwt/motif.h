@@ -45,7 +45,7 @@ class Motif{
     vector<int> explainMotif();
     
     void locateMotif(const char T[]);
-    void testMotifTag(genomeRegions &gR,const string& outPutDir);
+    void testMotifTag(genomeRegions &gR,const string& outPutDir,bool draw);
     //order 0 order 1 
     void initProb(const genomeRegions& gR,int order);
     void initPWM();
@@ -64,7 +64,7 @@ class Motif{
     //clustering methods
     std::pair<int,int> editDistance(const Motif& cluster);
 
-    
+    float histoneDistrDistance(const Motif& cluster);
     void concatenate(const Motif& m,int index ,int optimShift);
     void calPWM(const Motif& m,int optimShift);
     void trim();
@@ -77,7 +77,7 @@ class Motif{
     inline bool implicit();
     inline bool isRepeat();
     void sumScore();
-    static int motif[K_5];
+    //static int motif[K_5];
     static int distance[4][15];
 
     
@@ -97,7 +97,7 @@ class Motif{
 
 inline bool Motif::noWildcard(){
     for (int i=0; i<K; i++) 
-        if (query[i]=='N') 
+        if (query[i]!='A'&&query[i]!='C'&&query[i]!='G'&&query[i]!='T') 
             return false;
     return true;
 }

@@ -43,6 +43,8 @@ const int MAXDISTANCE = 12;
 const int SHIFT = 2;
 const int MAXCLUSTERSIZE = 20;
 const int MAXREPEATCNT = 2;
+const float MAXSIGNDIST = 3;
+const int MINOVERALLSCORE = 0;
 #define OUTFASTA
 #define DRAW_MOTIF
 //display for node string

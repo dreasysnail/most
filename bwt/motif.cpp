@@ -13,7 +13,7 @@
 using namespace std;
 
 int GenomeSize;
-int Motif::motif[K_5] = {0};
+//int Motif::motif[K_5] = {0};
 /*
 int Motif::distance[4][15] = {  {0,1,1,1,0,0,0,1,1,1,1,0,0,0,0},
                                 {1,0,1,1,0,1,1,0,0,1,0,1,0,0,0}, 
@@ -109,7 +109,7 @@ void Motif::locateMotif(const char T[]){
 
 
 
-void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir){
+void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool draw){
     signif.clear();
     for (int j=0; j<gR.tagName.size(); j++) {
         vector<short int> &tag = gR.genomeTags[gR.tagName[j]];
@@ -157,34 +157,31 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir){
         //cout<<sumMotif<<temp<<average<<"var "<<variance<<" Counter"<<counter<<" height"<<logf(sumMotif/float(counter))<<endl;
         //signif.push_back((sumMotif-average)/variance*logf(sumMotif/float(counter))) ;
         signif.push_back((sumMotif-average)/variance);
-        if (signif.back()<0) {
-            signif.back()=-signif.back();
-        }
         //cout<<sumMotif<<sumAround<<endl;
         //cout<<tagName<<" "<<query<<" "<<sumMotif<<" "<<" "<<(2*dist+query.size()-1)<<" "<<sumMotif/counter/(2*dist+query.size()-1)<<endl;
-        
+        if (draw) {
 #ifdef DRAW_MOTIF
-        string fileName = outPutDir + "/motif.dist";
-        ofstream distFile(fileName.c_str(),ios::app);
-        if (!distFile) {
-            string errorInfo = "Error! Fail to open distFile for writing!";
-            printAndExit(errorInfo);
-        }
-        distFile<<">"<<query<<"_Conscore_"<<score<<"_Tag_"<<tagName<<"_AVG_"<<sumMotif/counter/(2*dist+query.size()-1)<<"_Sig_"<<signif<<"\n";
-        for (int l=SAMPLESIZE-1;l>=0 ;l--) {
-            int pos = -(2*l+2)*dist-(l+1)*query.size()-offset;
-            //cout<<pos<<endl;
-            distFile<<pos<<"\t"<<sumAround[l]<<"\n";
-        }
-        distFile<<0<<"\t"<<sumMotif<<"\n";
-        for (int l=0; l<SAMPLESIZE; l++) {
-            distFile<<(2*l+2)*dist+(l+1)*query.size()+offset<<"\t"<<sumAround[l+SAMPLESIZE]<<"\n";
-        }
-        
-        distFile<<endl;
+            string fileName = outPutDir + "/motif.dist";
+            ofstream distFile(fileName.c_str(),ios::app);
+            if (!distFile) {
+                string errorInfo = "Error! Fail to open distFile for writing!";
+                printAndExit(errorInfo);
+            }
+            distFile<<">"<<query<<"_Conscore_"<<score<<"_Tag_"<<tagName<<"_AVG_"<<sumMotif/counter/(2*dist+query.size()-1)<<"_Sig_"<<signif<<"\n";
+            for (int l=SAMPLESIZE-1;l>=0 ;l--) {
+                int pos = -(2*l+2)*dist-(l+1)*query.size()-offset;
+                //cout<<pos<<endl;
+                distFile<<pos<<"\t"<<sumAround[l]<<"\n";
+            }
+            distFile<<0<<"\t"<<sumMotif<<"\n";
+            for (int l=0; l<SAMPLESIZE; l++) {
+                distFile<<(2*l+2)*dist+(l+1)*query.size()+offset<<"\t"<<sumAround[l+SAMPLESIZE]<<"\n";
+            }
+            
+            distFile<<endl;
 #endif
 
-        
+        }        
     }
     
         
@@ -220,19 +217,20 @@ void Motif::initProb(const genomeRegions& gR,int order){
 }
 
 void Motif::initPWM(){
-    for (int i=0; i<query.size(); i++) {            
+    for (int i=0; i<query.size(); i++) {
+        int count = loci.size();
         switch (query[i]) {
             case 'A':
-                pwm[0][i] += motif[index];
+                pwm[0][i] += count;
                 break;
             case 'C':
-                pwm[1][i] += motif[index];
+                pwm[1][i] += count;
                 break;
             case 'G':
-                pwm[2][i] += motif[index];
+                pwm[2][i] += count;
                 break;
             case 'T':
-                pwm[3][i] += motif[index];
+                pwm[3][i] += count;
                 break;
             default:
                 break;
@@ -354,6 +352,20 @@ void Motif::concatenate(const Motif& m,int index,int optimShift){
     //    cout<<query<<endl;
 }
 
+float Motif::histoneDistrDistance(const Motif& cluster){
+    float signifDist = 0;
+    for (int i=0; i<signif.size(); i++) {
+        float temp = (signif[i]-cluster.signif[i])/(cluster.signif[i]+signif[i]);
+        if (temp>0) {
+            signifDist+=temp;
+        }
+        else {
+            signifDist-=temp;
+        }
+    }
+    return signifDist;
+}
+
 void Motif::trim(){
     int start = 0;
     int end = query.size()-1;
@@ -430,9 +442,9 @@ void Motif::sumScore(){
     overallScore = score*score;
     float tempScore = 0;
     for(int i=0;i<signif.size();i++){
-        tempScore += signif[i];
+        tempScore += signif[i]>0?signif[i]:-signif[i];
     }
-    overallScore *= tempScore/10.0;
+    overallScore *= tempScore;
 }
 
 ostream &operator<<( ostream &s, const Motif &motif ){

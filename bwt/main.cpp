@@ -120,9 +120,9 @@ int main(int argc, char **argv)
             //count words
             vector<Motif> qualifiedMotifs;
             qualifiedMotifs.reserve(K_5/1000);
-           
+            int counter1 = 0;
             for (int i = 0; i <(K_5); i++) {
-                printProgress(i,K_5,"find kmer from suffix tree:");
+                printProgress(i,K_5,"Qualify kmer from suffix tree:");
                 Motif thisMotif(i);
                 if (!thisMotif.noWildcard()) {
                     continue;
@@ -131,16 +131,27 @@ int main(int argc, char **argv)
                 //order null
                 thisMotif.initProb((*gR),-1);
                 thisMotif.loci = active.locateMotif(thisMotif,qualifiedMotifs);
-                Motif::motif[i]=thisMotif.loci.size();
+                
                 //cout<<allmotifs[i].loci.size()<<" "<<active.countString(allmotifs[i].query)<<endl;
-                temp += Motif::motif[i];
+                temp += thisMotif.loci.size();
                 thisMotif.calConscore(GenomeSize);
                 if (thisMotif.score&&!thisMotif.isRepeat()) {
+                    counter1++;
                     thisMotif.initPWM();
                     thisMotif.expMotifs.push_back(qualifiedMotifs.size());
-                    qualifiedMotifs.push_back(thisMotif);
+                    thisMotif.testMotifTag(*gR, outPutDir, false);
+                    thisMotif.sumScore();
+                    if (thisMotif.overallScore>MINOVERALLSCORE)
+                        qualifiedMotifs.push_back(thisMotif);
+                    else {
+                        thisMotif.printMotif();
+                    }
                 }
             }
+            cout<<"clustering result:";
+            cerr<<"\n"<<"STAGE1:"<<pow1(4, K)-counter1<<" kmer was filtered"<<"\n";
+            cerr<<"STAGE2:"<<counter1-qualifiedMotifs.size()<<" kmer was filtered"<<"\n";
+            cerr<<"Left:"<<qualifiedMotifs.size()<<endl;
             cerr<<"total motifs'loci size:"<<temp<<" approximate "<<GenomeSize<<endl;
             //need to eliminate allmotif
             
@@ -149,10 +160,8 @@ int main(int argc, char **argv)
             cerr<<"count words:"<<double((t3-t2_1)/1e6)<<endl;
             
             //clustering
+            vector<Motif> originalQualified(qualifiedMotifs);
             sort(qualifiedMotifs.begin(), qualifiedMotifs.end(),compareMotif());
-            for (int j=0; j<30; j++) {
-                    qualifiedMotifs[j].testMotifTag(*gR,outPutDir);
-            }
             
             
             //cout<<qualifiedMotifs.size()<<qualifiedMotifs[0]<<qualifiedMotifs[1]<<endl;
@@ -168,11 +177,12 @@ int main(int argc, char **argv)
                 int bound = clusters.size();
                 for (int j=0; j<bound; j++) {
                     pair<int,int> dist_shift = qualifiedMotifs[i].editDistance(clusters[j]);
+                    float signifDist = qualifiedMotifs[i].histoneDistrDistance(clusters[j]);
                     //if highest mark is antisense and matched current cluster
                     if (dist_shift.first<0&&(-dist_shift.first)<=MAXDISTANCE) {
                         goto nextMotif;
                     }
-                    else if (dist_shift.first<=MAXDISTANCE) {
+                    else if (dist_shift.first<=MAXDISTANCE&&signifDist<=MAXSIGNDIST) {
                         //cluster size exceed Max cluster size
                         int queryLength = clusters[j].query.size();
                         if (queryLength>=MAXCLUSTERSIZE&&(dist_shift.second<0||dist_shift.second+K>queryLength)) {
@@ -181,6 +191,8 @@ int main(int argc, char **argv)
                         //cout<<qualifiedMotifs[i].query<<qualifiedMotifs[i].probThresh<<" "<<qualifiedMotifs[i].loci.size()<<endl<<j<<" "<<clusters[j].query<<endl;
                         clusters[j].concatenate(qualifiedMotifs[i],i,dist_shift.second);
                         clusters[j].calPWM(qualifiedMotifs[i], dist_shift.second);
+                        clusters[j].loci = active.locateMotif(clusters[j],originalQualified);
+                        clusters[j].testMotifTag(*gR,outPutDir,true);
                         goto nextMotif;
                     }
 
@@ -203,14 +215,14 @@ int main(int argc, char **argv)
                 */
                 clusters[i].trim();
                 //cout<<clusters[i].loci.size()<<endl;
-                clusters[i].loci = active.locateMotif(clusters[i],qualifiedMotifs);
+                clusters[i].loci = active.locateMotif(clusters[i],originalQualified);
                 //cout<<clusters[i].loci.size()<<endl;
                 //calculate score for each cluster
-                clusters[i].fillMotif(qualifiedMotifs);
-                clusters[i].testMotifTag(*gR,outPutDir);
+                clusters[i].fillMotif(originalQualified);
+                clusters[i].testMotifTag(*gR,outPutDir,true);
                 clusters[i].sumScore();
             }
-            sort(clusters.begin(),clusters.end(),compareMotif());
+            sort(clusters.begin(),clusters.end(),compareCluster());
             t4=clock();
             cerr<<"clustering:"<<double((t4-t3)/1e6)<<endl;
 
