@@ -14,44 +14,8 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <string>
 #include <map>
-
-
-//define motif length
-#define K 9
-#define K_5 1953125
-//#define K 7
-//#define K_5 78125
-#define DELTA 2
-//#define PSEUDO 0.001
-//#define MAXGENOME 2000000
-#define SAMPLESIZE 5
-//200M
-const long int MAX_LENGTH = 1e6;
-const long int HASH_TABLE_SIZE = 1e6;  //A prime roughly 10% larger
-//tag counter parameters
-const int dist=1;     //range               
-const int offset1=100;    //gap
-const int offset=2;    //gap
-//const float SINGIFTHRESH = 2;
-//const float SCORETHRESH =5;
-
-//cluster
-const int CLUSTERMAX = 25;
-const int MOTIFMAX = 150;
-const int MAXDISTANCE = 12;
-const int SHIFT = 2;
-const int MAXCLUSTERSIZE = 20;
-const int MAXREPEATCNT = 2;
-const float MAXSIGNDIST = 3;
-const int MINOVERALLSCORE = 0;
-#define OUTFASTA
-#define DRAW_MOTIF
-//display for node string
-
-#undef display
-//#define display
-
 
 using std::string;
 using std::vector;
@@ -59,6 +23,47 @@ using std::map;
 using std::cerr;
 using std::endl;
 using std::ostream;
+using std::pair;
+
+void parseCommandLine(int argc,char** argv,map<string, string> &option);
+
+//define motif length
+extern int K;
+#define DELTA 3
+//#define PSEUDO 0.001
+//#define MAXGENOME 2000000
+#define SAMPLESIZE 75
+//200M
+const long int MAX_LENGTH = 3e6;
+const long int HASH_TABLE_SIZE = 6e6;  //A prime roughly 10% larger
+//tag counter parameters
+const int dist=2;     //range               
+const int offset=20;    //gap
+
+
+//const float SINGIFTHRESH = 2;
+//const float SCORETHRESH =5;
+
+//cluster
+const int CLUSTERMAX = 25;
+const int MOTIFMAX = 150;
+const int MAXDISTANCE = 12;
+const int SHIFT = 3;
+const int MAXCLUSTERSIZE = 20;
+const int MAXREPEATCNT = 3;
+const float MAXSIGNDIST = 3;
+const int MINOVERALLSCORE = 0;
+
+//cut tag extend bound
+const int EXTENDBOUND = (2*SAMPLESIZE+2)*dist+SAMPLESIZE*(MAXCLUSTERSIZE+1)+offset*SAMPLESIZE+10;
+#undef OUTFASTA
+//display for node string
+
+#undef display
+//#define display
+
+
+
 
 struct genomeRegion {
     int startP;
@@ -69,12 +74,12 @@ struct genomeRegion {
 class genomeRegions{
 public:
     
-    genomeRegions(int num):extend(num){};
+    genomeRegions(int num):extend(num),segmentStartPos(0){segmentStartPos.push_back(0);};
     vector <genomeRegion> genomes;
     //final seqs
-    map<string,string> genomeSeqs;
+    map<string,string> regionSeqs;
     //final tags
-    map<string,vector <short int> > genomeTags;
+    map<string,vector <short int> > regionTags;
     //genome prob for trans and single site
     float prob[5][4];
     //total size of each genome(<200M).
@@ -86,7 +91,7 @@ public:
 
     int extend;
     void getSeq(const string& outPutDir);
-    void inline writeSeq(ostream &outFile,int startP,int endP,string &currentChr);
+    void inline appendSeq(ostream &outFile,int startP,int endP,string &currentChr);
     int catSeq(char* T);
     void getTagBed(const string& thisHistone,const string& currentChr );    //get 0-1 sequence from bed file
     void appendTag(int a,int b,const string& chr,const string& thisHistone);
@@ -101,8 +106,12 @@ public:
     bool readWig(const string &filename);
     
     bool readFasta(const string &filename);
+    int segmentCount;
+    //store subscript in genometag for starting pos of segment
+    vector<int> segmentStartPos;
    
 };
+
 bool chrCompare(const string& chr1,const std::string &chr2);
 /* dnaRegion comparison function */
 inline bool compareGenome(genomeRegion gr1, genomeRegion gr2)
@@ -142,7 +151,6 @@ void printProgress(const int i,const int total,const string& message);
 template <class T>
 ostream &operator<<( ostream &s, const vector<T> &v){
     if (v.size()==0){
-        s<<"NULL vector"<<endl;
         return s;
     }
     s<<"(";
@@ -150,7 +158,7 @@ ostream &operator<<( ostream &s, const vector<T> &v){
     {
         s<<v[i]<<",";
     }    
-    s<<v.back()<<")"<<endl;
+    s<<v.back()<<")";
     return s;
 };
 
@@ -162,6 +170,12 @@ ostream &operator<<( ostream &s, const vector<vector<T> > &m){
         }
         s<<endl;
     }
+    return s;
+};
+
+template <typename T>
+ostream &operator<<( ostream &s, const std::pair<T, T> &_p){
+    s<<"("<<_p.first<<","<<_p.second<<")"<<endl;
     return s;
 };
 
@@ -206,5 +220,9 @@ inline int alp2num(const char& name){
 float pow1(float base,int index);
 string antisense(const string& tempString);
 char degenerate(char a,char b);
+//assume sorted , locate subscript return <sub,dist>
+
+pair<int,int> locateSubscript(const vector<int> &listObj, vector<int>::const_iterator begin,vector<int>::const_iterator end, int queryVal);
+
 
 #endif

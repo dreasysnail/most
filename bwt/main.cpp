@@ -27,6 +27,7 @@ extern int GenomeSize;
 extern Edge* Edges;
 extern Node* Nodes;
 void preInitialization(Edge* Edges,Node* Nodes);
+void test();
 int temp;
 
 int main(int argc, char **argv)
@@ -38,47 +39,50 @@ int main(int argc, char **argv)
     Node *NodesTemp = new Node[ MAX_LENGTH * 2 ];
     genomeRegions *gR = new genomeRegions(0);
     
+    //for test
+    //test();
+    map<string,string> option;
+    parseCommandLine(argc, argv,option);
+    
+        
     preInitialization(EdgesTemp,NodesTemp);
     
     
     Suffix active( 0, 0, -1 );  // The initial active prefix
+    
     while (true) {
-        if (argc<2||(argv[1][1]!='m'&&argc<4)) {
-            printUsage();
-            exit(1);
-        }
 
         // tag mode
-        if (argv[1][1]=='t'&&argc==7) {
+        if (option["mode"]=="tag") {
             /************************
             2:tss.bed
             3:fasta
             4:histone.wig/histone.bed
             6:output directory
             ************************/
-            string outPutDir(argv[6]); 
+            string outPutDir(option["outdir"]); 
             system(("rm -rf "+outPutDir).c_str());
             if (system(("mkdir "+outPutDir).c_str()) != 0)
             {
                 cerr<<"cannot make directory"<<endl;
                 exit(1);
             }
-            //extend 300bp
+            
             
 
-            gR->readFasta(argv[3]);
-            gR->readBed(argv[2]);
+            gR->readFasta(option["fastafile"]);
+            gR->readBed(option["regionfile"]);
             gR->mergeOverlap();
             gR->getSeq(outPutDir);
             //region-wide
             //gR->initProb(2);
             //initiate T 
-            cerr<<"regionFile（bedFormat）:"<<argv[2]<<endl;
+            cerr<<"regionFile（bedFormat）:"<<option["regionfile"]<<endl;
             GenomeSize = gR->catSeq(T);
             t1=clock();
             cerr<<"Parsing Fasta:"<<double((t1-tStart)/1e6)<<endl;
             
-            string tagFileName(argv[4]);
+            string tagFileName(option["tagfile"]);
             //if tag file is wigfile
             if (tagFileName.substr(tagFileName.size()-3,3)=="wig") {
                 cerr<<"tagfile（WigFormat）:"<<tagFileName<<endl;
@@ -86,10 +90,10 @@ int main(int argc, char **argv)
             }
             else {
                 //problematic
-                genomeRegions tag(0);
-                cerr<<"tagfile（BedFormat）:"<<tagFileName<<endl;
-                tag.readBed(tagFileName);
-                gR->writeRawTag(tag);
+                //genomeRegions tag(0);
+                //cerr<<"tagfile（BedFormat）:"<<tagFileName<<endl;
+                //tag.readBed(tagFileName);
+                //gR->writeRawTag(tag);
             }
             //gR->getTagBed();
             t2=clock();
@@ -101,36 +105,39 @@ int main(int argc, char **argv)
             //ofstream tfile("aa.fa");
             //tfile<<T<<endl;
             //cerr<<T<<endl;
-            //cout<<gR->genomeTags<<endl;
+            //cout<<gR->regionTags<<endl;
             for (int i=0; i<gR->tagName.size(); i++) {
-                cerr<<gR->tagName[i]<<"size:"<<gR->genomeTags[gR->tagName[i]].size()<<"\t";
-                //cerr<<gR->genomeTags[gR->tagName[i]]<<endl;
-                assert(GenomeSize==gR->genomeTags[gR->tagName[i]].size());
+                cerr<<gR->tagName[i]<<"size:"<<gR->regionTags[gR->tagName[i]].size()<<"\t";
+                //cerr<<gR->regionTags[gR->tagName[i]]<<endl;
+                cerr<<long(gR->regionTags[gR->tagName[i]].size())-EXTENDBOUND*4*gR->segmentCount<<endl;
+                assert(GenomeSize==long(gR->regionTags[gR->tagName[i]].size())-EXTENDBOUND*4*gR->segmentCount);
             }
             cerr<<"genomesize:"<<GenomeSize<<endl;
             assert(GenomeSize<=MAX_LENGTH);
             assert(GenomeSize*2<=HASH_TABLE_SIZE);
+            assert(gR->segmentStartPos.back()==GenomeSize);
             N = strlen(T) - 1;
             
             for ( int i = 0 ; i <= N ; i++ )
                 active.AddPrefix(i);
             t2_1=clock();
+        
             cerr<<"built suffix tree:"<<double((t2_1-t2)/1e6)<<endl;
             
             //count words
+            string fileName = outPutDir + "/cluster_signif";
+            ofstream clusterFile(fileName.c_str(),ios::app);
             vector<Motif> qualifiedMotifs;
-            qualifiedMotifs.reserve(K_5/1000);
+            const int K_4=pow1(4, K);
+            qualifiedMotifs.reserve(K_4/1000);
             int counter1 = 0;
-            for (int i = 0; i <(K_5); i++) {
-                printProgress(i,K_5,"Qualify kmer from suffix tree:");
+            for (int i = 0; i <(K_4); i++) {
+                printProgress(i,K_4,"Qualify kmer from suffix tree:");
                 Motif thisMotif(i);
-                if (!thisMotif.noWildcard()) {
-                    continue;
-                }
-                
+                //if (!thisMotif.noWildcard()) continue;
                 //order null
                 thisMotif.initProb((*gR),-1);
-                thisMotif.loci = active.locateMotif(thisMotif,qualifiedMotifs);
+                thisMotif.loci = active.locateMotif(thisMotif);
                 
                 //cout<<allmotifs[i].loci.size()<<" "<<active.countString(allmotifs[i].query)<<endl;
                 temp += thisMotif.loci.size();
@@ -138,37 +145,41 @@ int main(int argc, char **argv)
                 if (thisMotif.score&&!thisMotif.isRepeat()) {
                     counter1++;
                     thisMotif.initPWM();
-                    thisMotif.expMotifs.push_back(qualifiedMotifs.size());
                     thisMotif.testMotifTag(*gR, outPutDir, false);
-                    thisMotif.sumScore();
-                    if (thisMotif.overallScore>MINOVERALLSCORE)
+                    thisMotif.sumOverallScore();
+                    if (thisMotif.overallScore>MINOVERALLSCORE){
+                        //has pwm loci sign conscore motifProb.
                         qualifiedMotifs.push_back(thisMotif);
+                    }
                     else {
-                        thisMotif.printMotif();
+                        clusterFile<<"filtered:\t"<<thisMotif.query<<"\t"<<thisMotif.score<<"\t"<<thisMotif.signif<<endl;
                     }
                 }
             }
-            cout<<"clustering result:";
-            cerr<<"\n"<<"STAGE1:"<<pow1(4, K)-counter1<<" kmer was filtered"<<"\n";
+            cerr<<"clustering result:";
+            cerr<<"\n"<<"STAGE1:"<<K_4-counter1<<" kmer was filtered"<<"\n";
             cerr<<"STAGE2:"<<counter1-qualifiedMotifs.size()<<" kmer was filtered"<<"\n";
             cerr<<"Left:"<<qualifiedMotifs.size()<<endl;
             cerr<<"total motifs'loci size:"<<temp<<" approximate "<<GenomeSize<<endl;
             //need to eliminate allmotif
-            
-            
+            if (qualifiedMotifs.size()==0) {
+                cerr<<"too strict parameters!";
+                exit(1);
+            }
             t3=clock();
             cerr<<"count words:"<<double((t3-t2_1)/1e6)<<endl;
             
             //clustering
-            vector<Motif> originalQualified(qualifiedMotifs);
             sort(qualifiedMotifs.begin(), qualifiedMotifs.end(),compareMotif());
-            
-            
+       
             //cout<<qualifiedMotifs.size()<<qualifiedMotifs[0]<<qualifiedMotifs[1]<<endl;
-            vector<Motif> clusters;
-            int maxMotifSize=(MOTIFMAX<qualifiedMotifs.size()?MOTIFMAX:qualifiedMotifs.size());
-            clusters.push_back(qualifiedMotifs[0]);
-            //for (int i=0; i<10; i++) qualifiedMotifs[i].printMotif();
+            vector<Cluster> clusters;
+            int maxMotifSize=min(MOTIFMAX, int(qualifiedMotifs.size()));
+            
+            Cluster temp0(qualifiedMotifs[0]);
+            clusters.push_back(temp0);
+            
+            for (int i=0; i<10; i++) qualifiedMotifs[i].testMotifTag(*gR,outPutDir,true);
             // pair<int,int> tempa = qualifiedMotifs[2].editDistance(qualifiedMotifs[4]);
             // cout<<tempa.first<<" "<<tempa.second<<endl;
             cerr<<"clustering:"<<endl;
@@ -176,53 +187,65 @@ int main(int argc, char **argv)
                 printProgress(i,maxMotifSize,"clustering:");
                 int bound = clusters.size();
                 for (int j=0; j<bound; j++) {
-                    pair<int,int> dist_shift = qualifiedMotifs[i].editDistance(clusters[j]);
-                    float signifDist = qualifiedMotifs[i].histoneDistrDistance(clusters[j]);
-                    //if highest mark is antisense and matched current cluster
-                    if (dist_shift.first<0&&(-dist_shift.first)<=MAXDISTANCE) {
+                    pair<int,int> dist_shift = clusters[j].editDistance(qualifiedMotifs[i]);
+                    float signifDist = clusters[j].histoneDistrDistance(qualifiedMotifs[i]);
+                    //if highest mark is antisense and matched current cluster,discard
+                    if (dist_shift.first<=0&&(-dist_shift.first)<=MAXDISTANCE) {
                         goto nextMotif;
                     }
-                    else if (dist_shift.first<=MAXDISTANCE&&signifDist<=MAXSIGNDIST) {
-                        //cluster size exceed Max cluster size
+                    //try next cluster
+                    else if (dist_shift.first<=0&&(-dist_shift.first)>MAXDISTANCE){
+                        continue;
+                    }
+                    //else if (dist_shift.first<=MAXDISTANCE&&signifDist<=MAXSIGNDIST) {
+                    else if (dist_shift.first<=MAXDISTANCE) {
                         int queryLength = clusters[j].query.size();
+                        //if cluster size exceed Max cluster size after this motif appended,discard
                         if (queryLength>=MAXCLUSTERSIZE&&(dist_shift.second<0||dist_shift.second+K>queryLength)) {
                             goto nextMotif;
                         }
-                        //cout<<qualifiedMotifs[i].query<<qualifiedMotifs[i].probThresh<<" "<<qualifiedMotifs[i].loci.size()<<endl<<j<<" "<<clusters[j].query<<endl;
+                        clusterFile<<i<<" "<<qualifiedMotifs[i].query<<qualifiedMotifs[i].signif<<"dist"<<dist_shift.first<<"shift"<<dist_shift.second<<"\n"<<j<<" "<<clusters[j].query<<clusters[j].signif<<endl;
+                        int prevSize = clusters[j].query.size();
                         clusters[j].concatenate(qualifiedMotifs[i],i,dist_shift.second);
+                        //recalculate four attributes
                         clusters[j].calPWM(qualifiedMotifs[i], dist_shift.second);
-                        clusters[j].loci = active.locateMotif(clusters[j],originalQualified);
+                        clusters[j].appendLoci(qualifiedMotifs[i]);
                         clusters[j].testMotifTag(*gR,outPutDir,true);
+                        clusters[j].addProb(qualifiedMotifs[i],prevSize);
+                        clusters[j].calConscore(GenomeSize);
+                        clusters[j].sumOverallScore();
+                        sort(clusters.begin(),clusters.end(),compareCluster());
                         goto nextMotif;
+                    }
+                    //for test: cluster system 
+                    else if (dist_shift.first>0&&dist_shift.first<=MAXDISTANCE&&signifDist>MAXSIGNDIST){
+                        clusterFile<<"signif not consistent:"<<"\n"<<i<<" "<<qualifiedMotifs[i].query<<qualifiedMotifs[i].signif<<"dist"<<dist_shift.first<<"shift"<<dist_shift.second<<"\n"<<j<<" "<<clusters[j].query<<clusters[j].signif<<endl;
+                    }
+                    else {
+                        //test next cluster
+                        continue;
                     }
 
                 }
                 //if not aligned to any cluster
                 if (clusters.size()<CLUSTERMAX){
+                    if (qualifiedMotifs[i].isRepeat()) {
+                        continue;
+                    }
                     qualifiedMotifs[i].index = -1;
-                    clusters.push_back(qualifiedMotifs[i]);
+                    Cluster temp0(qualifiedMotifs[i]);
+                    clusters.push_back(temp0);
                 }
             nextMotif:
                 continue;
             }
             //calculating
-            for (int i=0; i<clusters.size(); i++){
-                /*
-                if (clusters[i].implicit()) {
-                    clusters[i].score = 0;
-                    continue;
-                }
-                */
-                clusters[i].trim();
+            for (int j=0; j<clusters.size(); j++){
+                clusters[j].trim();            
                 //cout<<clusters[i].loci.size()<<endl;
-                clusters[i].loci = active.locateMotif(clusters[i],originalQualified);
                 //cout<<clusters[i].loci.size()<<endl;
                 //calculate score for each cluster
-                clusters[i].fillMotif(originalQualified);
-                clusters[i].testMotifTag(*gR,outPutDir,true);
-                clusters[i].sumScore();
             }
-            sort(clusters.begin(),clusters.end(),compareCluster());
             t4=clock();
             cerr<<"clustering:"<<double((t4-t3)/1e6)<<endl;
 
@@ -233,6 +256,170 @@ int main(int argc, char **argv)
                 cout<<gR->tagName[i]<<"\t";
                 
             }
+            cout<<"lociSize:"<<endl;
+            for (int i=0; i<clusters.size(); i++){
+                clusters[i].printMotif();
+            }
+            
+            //write pwm file;
+            fileName = outPutDir + "/allmotif.pwm";
+            ofstream pwmFile(fileName.c_str());
+            if (!pwmFile) {
+                string errorInfo = "Error! Fail to open pwmFile for writing!";
+                printAndExit(errorInfo);
+            }
+            for (int i = 0; i<clusters.size(); i++) {
+                printProgress(i,clusters.size(), "Generate PWM file");
+                pwmFile<<clusters[i];
+                
+                
+            }            
+            //write pwm and dist
+            
+            tEnd=clock();
+            cerr<<"total time eclapse:"<<double((tEnd-tStart)/1e6)<<endl;
+            
+            exit(0);
+        }
+        else if (option["mode"]=="normal") {
+    
+            string outPutDir(option["outdir"]); 
+            system(("rm -rf "+outPutDir).c_str());
+            if (system(("mkdir "+outPutDir).c_str()) != 0)
+            {
+                cerr<<"cannot make directory"<<endl;
+                exit(1);
+            }
+            
+            
+            
+            gR->readFasta(option["fastafile"]);
+            gR->readBed(option["regionfile"]);
+            gR->mergeOverlap();
+            gR->getSeq(outPutDir);
+            //region-wide
+            //gR->initProb(2);
+            //initiate T 
+            cerr<<"regionFile（bedFormat）:"<<option["regionfile"]<<endl;
+            GenomeSize = gR->catSeq(T);
+            t1=clock();
+            cerr<<"Parsing Fasta:"<<double((t1-tStart)/1e6)<<endl;
+            //ofstream tfile("aa.fa");
+            //tfile<<T<<endl;
+            //cerr<<T<<endl;
+            cerr<<"genomesize:"<<GenomeSize<<endl;
+            assert(GenomeSize<=MAX_LENGTH);
+            assert(GenomeSize*2<=HASH_TABLE_SIZE);
+            N = strlen(T) - 1;
+            
+            for ( int i = 0 ; i <= N ; i++ )
+                active.AddPrefix(i);
+            t2=clock();
+            cerr<<"built suffix tree:"<<double((t2-t1)/1e6)<<endl;
+            
+            //count words
+            vector<Motif> qualifiedMotifs;
+            const int K_4=pow1(4, K);
+            qualifiedMotifs.reserve(K_4/1000);
+            int counter1 = 0;
+            for (int i = 0; i <(K_4); i++) {
+                printProgress(i,K_4,"Qualify kmer from suffix tree:");
+                Motif thisMotif(i);
+                //if (!thisMotif.noWildcard()) continue;
+                //order null
+                thisMotif.initProb((*gR),atoi(option["order"].c_str()));
+                thisMotif.loci = active.locateMotif(thisMotif);
+                
+                //cout<<allmotifs[i].loci.size()<<" "<<active.countString(allmotifs[i].query)<<endl;
+                temp += thisMotif.loci.size();
+                thisMotif.calConscore(GenomeSize);
+                if (thisMotif.score&&!thisMotif.isRepeat()) {
+                    counter1++;
+                    thisMotif.initPWM();
+                    qualifiedMotifs.push_back(thisMotif);
+                }
+            }
+            cerr<<"\n"<<"STAGE1(filter words with low frequence):"<<K_4-counter1<<" kmer was filtered"<<"\n";
+            cerr<<"Left:"<<qualifiedMotifs.size()<<endl;
+            cerr<<"total motifs'loci size:"<<temp<<" approximate "<<GenomeSize<<endl;
+            //need to eliminate allmotif
+            if (qualifiedMotifs.size()==0) {
+                cerr<<"too strict parameters!";
+                exit(1);
+            }
+            t3=clock();
+            cerr<<"count words:"<<double((t3-t2)/1e6)<<endl;
+            //clustering
+            sort(qualifiedMotifs.begin(), qualifiedMotifs.end(),compareMotif());
+            vector<Cluster> clusters;
+            int maxMotifSize=min(MOTIFMAX, int(qualifiedMotifs.size()));
+            Cluster temp0(qualifiedMotifs[0]);
+            clusters.push_back(temp0);
+            // pair<int,int> tempa = qualifiedMotifs[2].editDistance(qualifiedMotifs[4]);
+            // cout<<tempa.first<<" "<<tempa.second<<endl;
+            cerr<<"clustering:"<<endl;
+            for (int i=1; i<maxMotifSize; i++) { 
+                printProgress(i,maxMotifSize,"clustering:");
+                int bound = clusters.size();
+                for (int j=0; j<bound; j++) {
+                    pair<int,int> dist_shift = clusters[j].editDistance(qualifiedMotifs[i]);
+                    //if highest mark is antisense and matched current cluster,discard
+                    if (dist_shift.first<=0) {
+                        goto nextMotif2;
+                    }
+                    //try next cluster
+                    else if (dist_shift.first<=0&&(-dist_shift.first)>MAXDISTANCE){
+                        continue;
+                    }
+                    //else if (dist_shift.first<=MAXDISTANCE&&signifDist<=MAXSIGNDIST) {
+                    else if (dist_shift.first<=MAXDISTANCE) {
+                        int queryLength = clusters[j].query.size();
+                        //if cluster size exceed Max cluster size after this motif appended,discard
+                        if (queryLength>=MAXCLUSTERSIZE&&(dist_shift.second<0||dist_shift.second+K>queryLength)) {
+                            goto nextMotif2;
+                        }
+                        int prevSize = clusters[j].query.size();
+                        clusters[j].concatenate(qualifiedMotifs[i],i,dist_shift.second);
+                        //recalculate four attributes
+                        clusters[j].calPWM(qualifiedMotifs[i], dist_shift.second);
+                        clusters[j].appendLoci(qualifiedMotifs[i]);
+                        clusters[j].addProb(qualifiedMotifs[i],prevSize);
+                        clusters[j].calConscore(GenomeSize);
+                        sort(clusters.begin(),clusters.end(),compareMotif());
+                        goto nextMotif2;
+                    }
+                    //for test: cluster system 
+                    else {
+                        //test next cluster
+                        continue;
+                    }
+                    
+                }
+                //if not aligned to any cluster
+                if (clusters.size()<CLUSTERMAX){
+                    if (qualifiedMotifs[i].isRepeat()) {
+                        continue;
+                    }
+                    qualifiedMotifs[i].index = -1;
+                    Cluster temp0(qualifiedMotifs[i]);
+                    clusters.push_back(temp0);
+                }
+            nextMotif2:
+                continue;
+            }
+            //calculating
+            for (int j=0; j<clusters.size(); j++){
+                clusters[j].trim();            
+                //cout<<clusters[i].loci.size()<<endl;
+                //cout<<clusters[i].loci.size()<<endl;
+                //calculate score for each cluster
+            }
+            t4=clock();
+            cerr<<"clustering:"<<double((t4-t3)/1e6)<<endl;
+            
+            
+            //write score info to cout
+            cout<<"Motif\tCONscore\t";
             cout<<"lociSize:"<<endl;
             for (int i=0; i<clusters.size(); i++){
                 clusters[i].printMotif();
@@ -256,118 +443,15 @@ int main(int argc, char **argv)
             tEnd=clock();
             cerr<<"total time eclapse:"<<double((tEnd-tStart)/1e6)<<endl;
             
-            
-            /*
-            
-            //pwm file;
-            delete [] EdgesTemp;
-            delete [] NodesTemp;
-            
-            cerr<<endl<<"count words:"<<double((t3-t2)/1e6)<<endl;
-            vector<Motif> significantMotifs;
-            
-            //start calculating wildcards
-            for (int i =0; i <(K_5); i++) {
-                printProgress(i,K_5,"calculate wildcard motifs:");
-                if (Motif::motif[i]!=0||i%5==0||allmotifs[i].noWildcard()||allmotifs[i].wildcardNum()>K/2||allmotifs[i].implicit()||allmotifs[i].isRepeat()) {
-                    continue;
-                }
-                allmotifs[i].fillMotif(allmotifs);
-                if (allmotifs[i].score) {
-                    //loci for this motif
-                    
-                    
-                    //allmotifs[i].locateMotif(T);
-                    allmotifs[i].loci = active.locateMotif(allmotifs[i],allmotifs);
-                    for (int j=0; j<gR->tagName.size(); j++) {
-                        allmotifs[i].testMotifTag(gR->genomeTags[gR->tagName[j]]);
-                    }
-                    
-                    allmotifs[i].printMotif();
-                    if (allmotifs[i].signif[0]>SINGIFTHRESH&&allmotifs[i].score>SCORETHRESH) {
-                        //calPWM
-                        allmotifs[i].sumScore();
-                        allmotifs[i].calPWM(allmotifs);
-                        significantMotifs.push_back(allmotifs[i]);
-                    }
-                }
-                
-            }
-            t4 = clock();
-            cerr<<endl<<"add words:"<<double((t4-t3)/1e6)<<endl;
-            sort(significantMotifs.begin(), significantMotifs.end(),compareMotif());
-            fileName = outPutDir + "/motif.dist";
-            ofstream distFile(fileName.c_str());
-            cerr<<endl<<"Generate PWM and DIST file with top "<<significantMotifs.size()<<" motifs:"<<endl;
-            
-            delete gR;
-           
-             
-            */
-            
-
-            return 1;
+            exit(0);
         }
-
-        
-        
-        cout << "Enter string: " << flush;
-        cin.getline( T, MAX_LENGTH - 1 );
-        cout<<T<<endl;
-        
-        if (T[0]=='.')
-            break;
-        else {
-            N = strlen( T ) - 1;
-            //cout<<N<<endl;
-            //
-            // The active point is the first non-leaf suffix in the
-            // tree.  We start by setting this to be the empty string
-            // at node 0.  The AddPrefix() function will update this
-            // value after every new prefix is added.
-            // suffix is a tree
-            //
-            
-            for ( int i = 0 ; i <= N ; i++ )
-                active.AddPrefix( i );
-            
-            
-            //display
-            for(int i=0;i<Node::Count;i++){
-                cout<<i<<"   "<<Nodes[i].father<<"   "<<Nodes[i].leaf_index<<"   "<<Nodes[i].suffix_node<<"    "<<endl;
-                //         Nodes[i].showNodeString();
-                
-                
-                
-                
-                
-            }
-            active.initialize();
-            
-            
-            
-            
-            // leaf index means it's a leaf and its no. 
-            // Once all N prefixes have been added, the resulting table
-            // of edges is printed out, and a validation step is
-            // optionally performed.
-            //
-            //   dump_edges( N );
-            //   cout << "Would you like to validate the tree?"
-            //        << flush;
-            //   std::string s;
-            //    std::getline( cin, s ); 
-            //   if ( s.size() > 0 && s[ 0 ] == 'Y' || s[ 0 ] == 'y' )
-            //       validate();
-
+        else if (option["mode"]=="help") {
+            printUsage();
+            exit(0);
         }
+        printUsage();
+        exit(1);     
     }
-    //print info
-    
-    
-    
-   
-       return 1;
 };
 
 void printUsage()
@@ -385,9 +469,9 @@ void printUsage()
 	usage		+=	"    -h --help\n\t\tPrint help information.\n";
     usage		+=	"    -d --debug\n\t\trun some test.\n";
     usage		+=	"    ATTENTION:LAST FILE SHOULD BE SORTED";
-	cout<<usage<<endl;
+	cerr<<usage<<endl;
     
-    cout << "Normally, suffix trees require that the last\n"
+    cerr << "Normally, suffix trees require that the last\n"
     << "character in the input string be unique.  If\n"
     << "you don't do this, your tree will contain\n"
     << "suffixes that don't end in leaf nodes.  This is\n"
@@ -402,4 +486,18 @@ void preInitialization(Edge* EdgesTemp,Node* NodesTemp){
     Nodes = NodesTemp;
     Edges = EdgesTemp;
 
+}
+
+
+void test(){
+    //test locateSub
+    int a[10]={0,3,10,14,20,30,40,60,90,120};
+    vector<int> b(a,a+10);
+    cerr<<b<<locateSubscript(b, b.begin(), b.end(), 120)<<endl;
+    //test
+    
+    
+    
+    
+    assert(0==1);
 }

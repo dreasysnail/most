@@ -90,7 +90,7 @@ public :
     //static Node (*Nodes);
     //static Edge (*Edges);
     void AddSuffixLink( int &last_parent, int parent); 
-    vector<int> locateMotif(Motif& currentMotif,const std::vector<Motif>& allmotifs);
+    vector<int> locateMotif(Motif& currentMotif);
     void traverseLoci(int offset, int nodeIndex);
 
 

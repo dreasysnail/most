@@ -13,6 +13,121 @@
 #include <stdlib.h>
 using namespace std;
 
+int K;
+
+
+/***********************************************************************
+ * parseCommandLine
+ *
+ *
+ ***********************************************************************/
+void parseCommandLine(int argc,
+                      char** argv,
+                      map<string, string> &option
+                      ) {
+    
+    // Set default values for command line arguments
+    cerr<<"Commandline:";
+    
+    map<string, bool> optionRequire;
+    //t:tag n:normal
+    option          ["mode"]        =   "normal";
+    optionRequire   ["mode"]        =   true;
+    //
+    option          ["fastafile"]   =   "";
+    optionRequire   ["fastafile"]   =   true;
+    //
+    option          ["regionfile"]  =   "";
+    optionRequire   ["regionfile"]  =   true;
+    //
+    option          ["tagfile"]     =   "";
+    optionRequire   ["tagfile"]     =   false;
+    //
+    option          ["outdir"]      =   "mosh_out";
+    optionRequire   ["outdir"]      =   false;
+    //
+    option          ["k"]      =   "9";
+    optionRequire   ["k"]      =   false;
+    //
+    option          ["order"]      =   "0";
+    optionRequire   ["order"]      =   false;
+    // Parse the command line.
+    string option_name = "";
+    string option_value = "";
+    
+    
+    // Read the next option, and break if we're done.
+    for (int i=1; i<argc-1; i+=2) {
+        option_name = argv[i];
+        option_value = argv[i+1];
+        cerr<<"("<<option_name<<" "<<option_value<<") ";
+        // Assign the parsed value to the appropriate variable
+        if (option_name == "-m") {
+            option["mode"] = option_value;
+            optionRequire["mode"] = false;
+            if (option_value=="tag") {
+                optionRequire["tagfile"] = true;
+            }
+            else if (option_value=="normal") {
+                
+            }
+            else if (option_value=="help") {
+                
+            }
+            else {
+                cerr<<"wrong mode!"<<endl;
+                exit(1);
+            }
+        } 
+        else if (option_name == "-f") {
+            option["fastafile"] = option_value;
+            optionRequire["fastafile"] = false;
+        } 
+        else if (option_name == "-r") {
+            option["regionfile"] = option_value;
+            optionRequire["regionfile"] = false;
+        } 
+        else if (option_name == "-t") {
+            option["tagfile"] = option_value;
+            optionRequire["tagfile"] = false;
+        } 
+        else if (option_name == "-o") {
+            option["outdir"] = option_value;
+            optionRequire["outdir"] = false;
+        } 
+        else if (option_name == "-k") {
+            option["k"] = option_value;
+        } 
+        else if (option_name == "-bo") {
+            option["order"] = option_value;
+        } 
+        else {
+            cerr<<"unrecognized option "<<option_name<<"! skip"<<endl;
+            continue;
+        } 
+    }
+    
+    // verify required arguments.
+    for (map<string, bool>::iterator it=optionRequire.begin();it!=optionRequire.end();it++) {
+        if (it->second) {
+            cerr<<"option "<<it->first<<" need to be specified in command line"<<endl;
+            exit(1);
+        }
+    }
+    //changing parameters
+    K = atoi(option["k"].c_str());
+    if (K<1||K>15) {
+        cerr<<"K should be integer among [1,15](default 9)"<<endl;
+        exit(1);
+    }
+    int order = atoi(option["order"].c_str());
+    if (order!=-1&&order!=0&&order!=1) {
+        cerr<<"order should be -1,0,1(default 0)"<<endl;
+        exit(1);
+    }
+    cerr<<endl;
+    
+}
 
 bool genomeRegions::readBed(const string &filename){
     ifstream bedFile(filename.c_str());
@@ -57,7 +172,7 @@ bool genomeRegions::readWig(const string &filename){
 
     string line;
     genomeRegion segment;
-    int wigStep;
+    int wigStep=25;
     string currentChr("");
     string thisHistone("");
         
@@ -167,7 +282,7 @@ bool genomeRegions::readWig(const string &filename){
         if (score<=0) {
             continue;
         }
-        if (segment.startP-1<=0||segment.endP>genomeLength[currentChr]) {
+        if (segment.startP-1<0||segment.endP>genomeLength[currentChr]) {
             continue;
         }
         //for performance
@@ -238,7 +353,7 @@ void genomeRegions::getSeq(const string& outPutDir){
     vector<genomeRegion>::iterator it;
     //chr1-chr19-chrX
     for (it = genomes.begin(); it!=genomes.end(); it++) {
-        writeSeq(regionFile,it->startP,it->endP,it->chr);
+        appendSeq(regionFile,it->startP,it->endP,it->chr);
     }
     //clear memory
     sort(chromeNames.begin(), chromeNames.end(),chrCompare);
@@ -252,14 +367,14 @@ void genomeRegions::getSeq(const string& outPutDir){
     
 }
 
-
-void inline genomeRegions::writeSeq(ostream &outFile,int startCut,int endCut,string &currentChr){
+//appendSeq to 
+void inline genomeRegions::appendSeq(ostream &outFile,int startCut,int endCut,string &currentChr){
     //cout<<currentChr<<" "<<startCut<<" "<<endCut<<" "<<rawGenome[currentChr].substr(startCut,endCut-startCut+1)<<endl;
     try {
         if (endCut<=startCut+1) {
             return;
         }
-        genomeSeqs[currentChr] += rawGenome[currentChr].substr(startCut,endCut-startCut+1)+"#";
+        regionSeqs[currentChr] += rawGenome[currentChr].substr(startCut,endCut-startCut+1)+"#";
         //generate fasta
     #ifdef OUTFASTA
         outFile<<">"<<currentChr<<":"<<startCut<<"-"<<endCut<<"\n";
@@ -285,9 +400,9 @@ int genomeRegions::catSeq(char* T){
     long int offset=0;
     string tempString("");
     for (chrit=chromeNames.begin(); chrit!=chromeNames.end(); chrit++) {
-        tempString += genomeSeqs[*chrit];
+        tempString += regionSeqs[*chrit];
         string tempS("");
-        genomeSeqs[*chrit].swap(tempS);
+        regionSeqs[*chrit].swap(tempS);
     }
     tempString += antisense(tempString)+"#";
     offset = tempString.size();
@@ -299,7 +414,7 @@ int genomeRegions::catSeq(char* T){
 }
 
 
-
+/*
 void genomeRegions::writeRawTag(genomeRegions &tagBed){
     //sort tagBed
     //sort(tagBed.genomes.begin(), tagBed.genomes.end(), compareGenome);
@@ -334,7 +449,7 @@ void genomeRegions::writeRawTag(genomeRegions &tagBed){
     }
 
 }
-
+*/
 
 void genomeRegions::mergeOverlap(){
     sort(genomes.begin(), genomes.end(), compareGenome);
@@ -387,8 +502,6 @@ void genomeRegions::mergeOverlap(){
         mergedGenome.push_back(tempG);
         //clear memory
         rawTag[currentChr].clear();
-        //append reverse for antisense
-        appendReverse();
     } catch (exception &e) {
         cerr<<e.what()<<endl;
         cerr<<"chrome:"<<currentChr<<" start:"<<startCut<<" end:"<<endCut<<" genomesize"<<rawTag[currentChr].size()<<endl;
@@ -419,21 +532,43 @@ void genomeRegions::getTagBed(const string& thisHistone,const string& currentChr
 }
 
 void genomeRegions::appendTag(int a,int b,const string& chr,const string& thisHistone){
+    if (thisHistone==tagName[0]) {
+        segmentCount++;
+        if (b<genomeLength[chr]-1) {
+            segmentStartPos.push_back(b-a+2+segmentStartPos.back());
+        }
+        else {
+            segmentStartPos.push_back(genomeLength[chr]+1-a+segmentStartPos.back());
+        }
+    }    
     try {
-        for (int i=a-1; i<b; i++) {
+        for (int i=a-1-EXTENDBOUND; i<b+EXTENDBOUND; i++) {
+            //if b exceed fasta's length
             if (i>=genomeLength[chr]-1) {
+                if (b>=genomeLength[chr]-1) {
+                    for (int j=0; j<EXTENDBOUND; j++) {
+                        regionTags[thisHistone].push_back(0);
+                    }
+                }
+                // if b<...
+                else {
+                    for (int j=0; j<EXTENDBOUND-(genomeLength[chr]-1-b); j++) {
+                        regionTags[thisHistone].push_back(0);
+                    }
+                }
                 break;
             }
             else {
                 if (i>=rawTag[thisHistone][chr].size()) {
-                    genomeTags[thisHistone].push_back(0);
+                    regionTags[thisHistone].push_back(0);
                 }
                 else {
-                    genomeTags[thisHistone].push_back(rawTag[thisHistone][chr][i]);
+                    regionTags[thisHistone].push_back(rawTag[thisHistone][chr][i]);
                 }
             }
+
         }
-        genomeTags[thisHistone].push_back(0);
+        regionTags[thisHistone].push_back(0);
     } catch (exception &e) {
         cerr<<e.what()<<endl;
         cerr<<"Tag insert error: chrome:"<<chr<<" start:"<<a<<" end:"<<b<<" chromesize"<<rawTag[thisHistone][chr].size()<<endl;
@@ -441,12 +576,22 @@ void genomeRegions::appendTag(int a,int b,const string& chr,const string& thisHi
 }
 
 void genomeRegions::appendReverse(){
+    //extend segmentStartPos
+    assert(segmentStartPos.size()==segmentCount+1);
+    int Halfway = segmentStartPos.back();
+    segmentStartPos.back()++;
+    for (int i=segmentCount-1; i>=0; i--) {
+        segmentStartPos.push_back(Halfway-segmentStartPos[i]+Halfway+1);
+    }
+    //cout<<segmentStartPos.size()<<segmentStartPos<<endl;
+    
+    //extent genomeTag for each
     for (vector<string>::iterator tagIt=tagName.begin(); tagIt!=tagName.end(); tagIt++) {
         string thisHistone = *tagIt;
-        vector<short int> temp(genomeTags[thisHistone]);
+        vector<short int> temp(regionTags[thisHistone]);
         reverse(temp.begin(), temp.end());
-        copy(temp.begin(), temp.end(),back_inserter(genomeTags[thisHistone]));
-        genomeTags[thisHistone].push_back(0);
+        copy(temp.begin(), temp.end(),back_inserter(regionTags[thisHistone]));
+        regionTags[thisHistone].push_back(0);
     }
 }
 
@@ -468,7 +613,7 @@ void genomeRegions::initProb(int mode){
     //only selected region
     else if (mode==2) {
         map<string,string>::iterator it;
-        for (it=genomeSeqs.begin(); it!=genomeSeqs.end(); it++ ) {
+        for (it=regionSeqs.begin(); it!=regionSeqs.end(); it++ ) {
             if ((it->second).size()==0) {
                 continue;
             }
@@ -509,6 +654,9 @@ void printProgress(const int i,const int total,const string& message){
     }
     if (i%(int((total)/50)+1)==0) {
         cerr<<">";
+    }
+    if (i==total-1) {
+        cerr<<endl;
     }
 }
 
@@ -741,4 +889,20 @@ bool chrCompare(const string& chr1,const std::string &chr2){
     return num1<num2;
 }
 
-
+pair<int,int> locateSubscript(const vector<int> &listObj, vector<int>::const_iterator begin,vector<int>::const_iterator end, int queryVal){
+	//assume sorted
+	int span = end - begin;
+	int currentVal = *(begin+int(span/2));
+	if (queryVal<0||queryVal>=listObj.back()){
+		return std::make_pair(-1, -1);
+	}
+	else if (span == 1){
+		return make_pair(begin-listObj.begin(), queryVal-currentVal) ;
+	}
+	else if (queryVal>currentVal){
+		return locateSubscript(listObj, begin+span/2, end, queryVal);
+	}
+	else {
+		return locateSubscript(listObj, begin, end-span/2, queryVal);
+	}  
+}

@@ -582,63 +582,52 @@ int Suffix::countString(const string &query ){
 }
 */
 
-vector<int> Suffix::locateMotif(Motif& currentMotif,const std::vector<Motif>& allmotifs){
+vector<int> Suffix::locateMotif(Motif& currentMotif){
     //implement2 find from edges walk tree
     //currentMotif.explainMotif();
     loci.clear();
-    
-    //if has wildcard or cluster
-    if (!currentMotif.noWildcard()||currentMotif.index==-1) {
-        for (int i=0; i<currentMotif.expMotifs.size();i++ ) {
-            loci.insert(loci.end(),allmotifs[currentMotif.expMotifs[i]].loci.begin(), allmotifs[currentMotif.expMotifs[i]].loci.end());
-            //cout<<"+"<<Motif::translate(currentMotif.expMotifs[i])<<allmotifs[currentMotif.expMotifs[i]].loci.size()<<"="<<loci.size()<<endl;
-        }
-        return loci;
-    }
-    //if no wildcard
-    else {
-        //cout<<currentMotif.expMotifs<<endl;
-        int currentNode = 0;
-        int current_query_index = 0;
-        int queryTemp;
-        string query = currentMotif.query;
-        while (current_query_index<query.size()) {
-            Edge tempEdge = Edge::Find(currentNode,query[current_query_index]);
-            // cout<<tempEdge<<endl;
-            //if find
-            if (tempEdge.start_node!=-1) {
-                string edgeString(&T[tempEdge.first_char_index],tempEdge.last_char_index-tempEdge.first_char_index+1);
-                //          cout<<T[tempEdge.first_char_index]<<edgeString<<endl;
-                queryTemp = query.size()-current_query_index;
-                if (edgeString.size()>=queryTemp){
-                    if (query.substr(current_query_index,queryTemp)!=edgeString.substr(0,queryTemp)) {
-                        break;
-                    }
-                    else {
-                        // return edgeString.size()==queryTemp?Nodes[tempEdge.end_node].leaf_count_beneath:Nodes[currentNode].leaf_count_beneath;
-                        if (Nodes[tempEdge.end_node].leaf_index!=-1){
-                            loci.push_back(GenomeSize - (current_query_index+tempEdge.last_char_index-tempEdge.first_char_index+1));
-                            break;
-                        }
-                        //traverse beneath nodes
-                        traverseLoci(current_query_index+edgeString.size(),tempEdge.end_node);
-                        break;
-                    }                    
+    //cout<<currentMotif.expMotifs<<endl;
+    int currentNode = 0;
+    int current_query_index = 0;
+    int queryTemp;
+    string query = currentMotif.query;
+    while (current_query_index<query.size()) {
+        Edge tempEdge = Edge::Find(currentNode,query[current_query_index]);
+        // cout<<tempEdge<<endl;
+        //if find
+        if (tempEdge.start_node!=-1) {
+            string edgeString(&T[tempEdge.first_char_index],tempEdge.last_char_index-tempEdge.first_char_index+1);
+            //          cout<<T[tempEdge.first_char_index]<<edgeString<<endl;
+            queryTemp = query.size()-current_query_index;
+            if (edgeString.size()>=queryTemp){
+                if (query.substr(current_query_index,queryTemp)!=edgeString.substr(0,queryTemp)) {
+                    break;
                 }
                 else {
-                    if (query.substr(current_query_index,edgeString.size())!=edgeString) {
+                    // return edgeString.size()==queryTemp?Nodes[tempEdge.end_node].leaf_count_beneath:Nodes[currentNode].leaf_count_beneath;
+                    if (Nodes[tempEdge.end_node].leaf_index!=-1){
+                        loci.push_back(GenomeSize - (current_query_index+tempEdge.last_char_index-tempEdge.first_char_index+1));
                         break;
                     }
-                    currentNode = tempEdge.end_node;
-                    current_query_index = current_query_index + edgeString.size();
-                }
+                    //traverse beneath nodes
+                    traverseLoci(current_query_index+edgeString.size(),tempEdge.end_node);
+                    break;
+                }                    
             }
             else {
-                break;
+                if (query.substr(current_query_index,edgeString.size())!=edgeString) {
+                    break;
+                }
+                currentNode = tempEdge.end_node;
+                current_query_index = current_query_index + edgeString.size();
             }
         }
+        else {
+            break;
+        }
+    }
     return loci;
-    }       
+        
 }
 
 
