@@ -146,8 +146,7 @@ int main(int argc, char **argv)
                     counter1++;
                     thisMotif.initPWM();
                     thisMotif.testMotifTag(*gR, outPutDir, false);
-                    thisMotif.sumOverallScore();
-                    if (thisMotif.overallScore>MINOVERALLSCORE){
+                    if (thisMotif.sumTagScore()>MINTAGSCORE){
                         //has pwm loci sign conscore motifProb.
                         qualifiedMotifs.push_back(thisMotif);
                     }
@@ -163,12 +162,10 @@ int main(int argc, char **argv)
             cerr<<"total motifs'loci size:"<<temp<<" approximate "<<GenomeSize<<endl;
             //need to eliminate allmotif
             if (qualifiedMotifs.size()==0) {
-                cerr<<"too strict parameters!";
-                exit(1);
+                printAndExit("too strict parameters!");
             }
             t3=clock();
             cerr<<"count words:"<<double((t3-t2_1)/1e6)<<endl;
-            
             //clustering
             sort(qualifiedMotifs.begin(), qualifiedMotifs.end(),compareMotif());
        
@@ -180,7 +177,7 @@ int main(int argc, char **argv)
             clusters.push_back(temp0);
             
             for (int i=0; i<10; i++) qualifiedMotifs[i].testMotifTag(*gR,outPutDir,true);
-            // pair<int,int> tempa = qualifiedMotifs[2].editDistance(qualifiedMotifs[4]);
+            // pair<int,int> tempa = qualifiedMotifs[2].editBINSPANance(qualifiedMotifs[4]);
             // cout<<tempa.first<<" "<<tempa.second<<endl;
             cerr<<"clustering:"<<endl;
             for (int i=1; i<maxMotifSize; i++) { 
@@ -197,14 +194,14 @@ int main(int argc, char **argv)
                     else if (dist_shift.first<=0&&(-dist_shift.first)>MAXDISTANCE){
                         continue;
                     }
-                    //else if (dist_shift.first<=MAXDISTANCE&&signifDist<=MAXSIGNDIST) {
+                    //else if (dist_shift.first<=MAXDISTANCE&&signifDist<=MAXKLDIV) {
                     else if (dist_shift.first<=MAXDISTANCE) {
                         int queryLength = clusters[j].query.size();
                         //if cluster size exceed Max cluster size after this motif appended,discard
                         if (queryLength>=MAXCLUSTERSIZE&&(dist_shift.second<0||dist_shift.second+K>queryLength)) {
                             goto nextMotif;
                         }
-                        clusterFile<<i<<" "<<qualifiedMotifs[i].query<<qualifiedMotifs[i].signif<<"dist"<<dist_shift.first<<"shift"<<dist_shift.second<<"\n"<<j<<" "<<clusters[j].query<<clusters[j].signif<<endl;
+                        clusterFile<<i<<" "<<qualifiedMotifs[i].query<<qualifiedMotifs[i].signif<<"dist"<<dist_shift.first<<"shift"<<dist_shift.second<<"\n"<<j<<"KL div"<<signifDist<<clusters[j].query<<clusters[j].signif<<endl;
                         int prevSize = clusters[j].query.size();
                         clusters[j].concatenate(qualifiedMotifs[i],i,dist_shift.second);
                         //recalculate four attributes
@@ -218,7 +215,7 @@ int main(int argc, char **argv)
                         goto nextMotif;
                     }
                     //for test: cluster system 
-                    else if (dist_shift.first>0&&dist_shift.first<=MAXDISTANCE&&signifDist>MAXSIGNDIST){
+                    else if (dist_shift.first>0&&dist_shift.first<=MAXDISTANCE&&signifDist>MAXKLDIV){
                         clusterFile<<"signif not consistent:"<<"\n"<<i<<" "<<qualifiedMotifs[i].query<<qualifiedMotifs[i].signif<<"dist"<<dist_shift.first<<"shift"<<dist_shift.second<<"\n"<<j<<" "<<clusters[j].query<<clusters[j].signif<<endl;
                     }
                     else {
@@ -371,7 +368,7 @@ int main(int argc, char **argv)
                     else if (dist_shift.first<=0&&(-dist_shift.first)>MAXDISTANCE){
                         continue;
                     }
-                    //else if (dist_shift.first<=MAXDISTANCE&&signifDist<=MAXSIGNDIST) {
+                    //else if (dist_shift.first<=MAXDISTANCE&&signifDist<=MAXKLDIV) {
                     else if (dist_shift.first<=MAXDISTANCE) {
                         int queryLength = clusters[j].query.size();
                         //if cluster size exceed Max cluster size after this motif appended,discard

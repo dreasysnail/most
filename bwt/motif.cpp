@@ -108,53 +108,41 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
     assert(loci.size()!=0);
     //only need loci and tagSeq
     signif.clear();
-    for (int j=0; j<gR.tagName.size(); j++) {
-        vector<short int> &tag = gR.regionTags[gR.tagName[j]];
-        string tagName = gR.tagName[j];
-        float sumMotif=0;
-        float sumAround[2*SAMPLESIZE]={0};
+    initBin(gR);
+    for (int t=0; t<gR.tagName.size(); t++) {
+        vector<short int> &tag = gR.regionTags[gR.tagName[t]];
+        string tagName = gR.tagName[t];
         //what's wrong with query.size()?  answer:   unsigned int always render the expression to be possitive
-        int queryLength=query.size();
         int counter = loci.size();
         for (int i=0; i<loci.size(); i++) {
-            if (loci[i]<(2*SAMPLESIZE+1)*dist+SAMPLESIZE*queryLength+offset||loci[i]>GenomeSize-(2*SAMPLESIZE+1)*dist-(SAMPLESIZE+1)*queryLength-1-offset) {
+            if (loci[i]<SAMPLESIZE*BINSPAN+SAMPLESIZE*offset+1||loci[i]>GenomeSize-(SAMPLESIZE+1)*BINSPAN-SAMPLESIZE*offset+1) {
                 counter--;
                 continue;
             }
             int thisLociCenter = mapLoci(loci[i],gR.segmentStartPos);
-            
-            for (int j=-dist; j<dist+queryLength; j++) {
-                sumMotif += tag[thisLociCenter+j];
-                
-            }
-            //     for (int j=-3*dist-K-offset1; j<-dist-offset1; j++) sumShoulder += tag[thisLociCenter+j];
-            //     for (int j=dist+K+offset1; j<3*dist+2*K+offset1; j++) sumShoulder += tag[thisLociCenter+j];
-            for (int l=0; l<SAMPLESIZE; l++) {
-                for (int j=-(2*l+3)*dist-(l+1)*queryLength-offset*(l+1); j<-(2*l+1)*dist-l*queryLength-offset*(l+1); j++) {
-                    sumAround[l] += tag[thisLociCenter+j];
-                }
-                for (int j=(2*l+1)*dist+(l+1)*queryLength+offset*(l+1); j<(2*l+3)*dist+(l+2)*queryLength+offset*(l+1); j++) {
-                    sumAround[l+SAMPLESIZE] += tag[thisLociCenter+j];
+            for (int l=0; l<2*SAMPLESIZE+1; l++) {
+                for (int j=(l-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j<(l+1-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j++) {
+                    sumBin[l][t] += tag[thisLociCenter+j];
                 }
             }
         }
         float totalAround=0;
         float variance = 0;
-        for (int i=0; i<SAMPLESIZE*2; i++) {
-            totalAround += sumAround[i];
+        for (int i=0; i<SAMPLESIZE*2+1; i++) {
+            totalAround += sumBin[i][t];
         }
-        float average = (totalAround+sumMotif)/(SAMPLESIZE*2+1);
-        for (int i=0; i<SAMPLESIZE*2; i++) {
-            variance += (sumAround[i]-average)*(sumAround[i]-average);
+        float average = totalAround/(SAMPLESIZE*2+1);
+        for (int i=0; i<SAMPLESIZE*2+1; i++) {
+            variance += (sumBin[i][t]-average)*(sumBin[i][t]-average);
+            //normalization for KL divergence
+            sumBin[i][t] /= totalAround;
         }
-        variance += (sumMotif-average)*(sumMotif-average);
-        variance = sqrt(variance/SAMPLESIZE*2)+0.000001;
-        //vector<float> temp(sumAround,sumAround+2*SAMPLESIZE);
+        //vector<float> temp(sumBin,sumBin+2*SAMPLESIZE);
         //cout<<sumMotif<<temp<<average<<"var "<<variance<<" Counter"<<counter<<" height"<<logf(sumMotif/float(counter))<<endl;
         //signif.push_back((sumMotif-average)/variance*logf(sumMotif/float(counter))) ;
-        signif.push_back((sumMotif-average)/variance);
-        //cout<<sumMotif<<sumAround<<endl;
-        //cout<<tagName<<" "<<query<<" "<<sumMotif<<" "<<" "<<(2*dist+query.size()-1)<<" "<<sumMotif/counter/(2*dist+query.size()-1)<<endl;
+        signif.push_back(variance);
+        //cout<<sumMotif<<sumBin<<endl;
+        //cout<<tagName<<" "<<query<<" "<<sumMotif<<" "<<" "<<(2*BINSPAN+query.size()-1)<<" "<<sumMotif/counter/(2*BINSPAN+query.size()-1)<<endl;
         if (ifDraw) {
             string fileName = outPutDir + "/motif.dist";
             ofstream distFile(fileName.c_str(),ios::app);
@@ -162,23 +150,21 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
                 string errorInfo = "Error! Fail to open distFile for writing!";
                 printAndExit(errorInfo);
             }
-            distFile<<">"<<query<<"_Conscore_"<<score<<"_Tag_"<<tagName<<"_AVG_"<<sumMotif/counter/(2*dist+query.size()-1)<<"_Sig_"<<signif<<"\n";
-            for (int l=SAMPLESIZE-1;l>=0 ;l--) {
-                int pos = -(2*l+2)*dist-(l+1)*query.size()-offset;
-                //cout<<pos<<endl;
-                distFile<<pos<<"\t"<<sumAround[l]/4/(dist*2+queryLength)<<"\n";
+            distFile<<">"<<query<<"_Conscore_"<<score<<"_Tag_"<<tagName<<"_Sig_"<<signif<<"\n";
+            for (int l=0; l<2*SAMPLESIZE+1; l++) {
+                int pos = (l-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE);
+                distFile<<pos<<"\t"<<sumBin[l][t]/4/BINSPAN<<"\n";
             }
-            distFile<<0<<"\t"<<sumMotif/4/(dist*2+queryLength)<<"\n";
-            for (int l=0; l<SAMPLESIZE; l++) {
-                distFile<<(2*l+2)*dist+(l+1)*query.size()+offset<<"\t"<<sumAround[l+SAMPLESIZE]/4/(dist*2+queryLength)<<"\n";
-            }
-            
             distFile<<endl;
         }        
     }
-    
-        
+}
 
+void Motif::initBin(genomeRegions &gR){
+    int tagSize = gR.tagName.size();
+    for (int l=0; l<2*SAMPLESIZE+1; l++) {
+        sumBin[l].assign(tagSize, 0);
+    }
 }
 
 
@@ -354,20 +340,15 @@ void Cluster::concatenate(const Motif& m,int index,int optimShift){
     }
     //    cout<<query<<endl;
 }
-
+//calculate KL divergence: motif to cluster
 float Cluster::histoneDistrDistance(const Motif& m){
-    Cluster &cluster = (*this);
-    float signifDist = 0;
-    for (int i=0; i<signif.size(); i++) {
-        float temp = (m.signif[i]-cluster.signif[i])/(cluster.signif[i]+m.signif[i]);
-        if (temp>0) {
-            signifDist+=temp;
-        }
-        else {
-            signifDist-=temp;
+    float temp = 0;
+    for (int t=0; t<sumBin[0].size(); t++) {
+        for (int l=0; l<SAMPLESIZE*2+1; l++) {
+            temp += sumBin[l][t]*log10f(sumBin[l][t]/m.sumBin[l][t]);
         }
     }
-    return signifDist;
+    return temp;
 }
 
 void Cluster::trim(){
@@ -465,9 +446,20 @@ void Motif::sumOverallScore(){
         return;
     }
     for(int i=0;i<signif.size();i++){
-        tempScore += fabs(signif[i]);
+        tempScore += signif[i];
     }
     overallScore *= tempScore+0.0001;
+}
+
+float Motif::sumTagScore(){
+    float tempScore = 0;
+    if (signif.size()==0) {
+        return 0;
+    }
+    for(int i=0;i<signif.size();i++){
+        tempScore += signif[i];
+    }
+    return tempScore;
 }
 
 ostream &operator<<( ostream &s, const Motif &motif ){

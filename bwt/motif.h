@@ -28,6 +28,8 @@ class Motif{
     vector<int> loci;
     vector<float> signif;
     float motifProb;
+    //each vector is a bin   sumBin[bin][tag]
+    vector<float> sumBin[2*SAMPLESIZE+1];
     //vector<int> expMotifs;
     //std::vector<string> Clusterexp;
     //conserve score;
@@ -45,6 +47,7 @@ class Motif{
     void locateMotif(const char T[]);
     inline int mapLoci(int genomePos,const vector<int>& tag);
     void testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw);
+    void initBin(genomeRegions &gR);
     //order 0 order 1 
     void initProb(const genomeRegions& gR,int order);
     void initPWM();
@@ -67,6 +70,7 @@ class Motif{
     inline bool implicit();
     inline bool isRepeat();
     void sumOverallScore();
+    float sumTagScore();
     static int distance[4][15]; 
     //print info
     void inline printMotif();  
@@ -87,7 +91,6 @@ public:
     //sumpwm for trim
     vector<int> totalPWM;
     int sumPWM();
-    
 };
 
 

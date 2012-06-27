@@ -32,30 +32,30 @@ extern int K;
 #define DELTA 3
 //#define PSEUDO 0.001
 //#define MAXGENOME 2000000
-#define SAMPLESIZE 75
+#define SAMPLESIZE 40
 //200M
 const long int MAX_LENGTH = 3e6;
 const long int HASH_TABLE_SIZE = 6e6;  //A prime roughly 10% larger
 //tag counter parameters
-const int dist=2;     //range               
-const int offset=20;    //gap
-
+const int BINSPAN=10;     //range               
+const int offset=30;    //gap
 
 //const float SINGIFTHRESH = 2;
 //const float SCORETHRESH =5;
 
 //cluster
 const int CLUSTERMAX = 25;
-const int MOTIFMAX = 150;
-const int MAXDISTANCE = 12;
+const int MOTIFMAX = 250;
+const int MAXDISTANCE = 14;
 const int SHIFT = 3;
 const int MAXCLUSTERSIZE = 20;
 const int MAXREPEATCNT = 3;
-const float MAXSIGNDIST = 3;
-const int MINOVERALLSCORE = 0;
+const float MAXKLDIV = 1;
+const int MINTAGSCORE = 0;
 
 //cut tag extend bound
-const int EXTENDBOUND = (2*SAMPLESIZE+2)*dist+SAMPLESIZE*(MAXCLUSTERSIZE+1)+offset*SAMPLESIZE+10;
+const int EXTENDBOUND = (SAMPLESIZE+1)*BINSPAN+offset*SAMPLESIZE+1;
+
 #undef OUTFASTA
 //display for node string
 
@@ -220,7 +220,7 @@ inline int alp2num(const char& name){
 float pow1(float base,int index);
 string antisense(const string& tempString);
 char degenerate(char a,char b);
-//assume sorted , locate subscript return <sub,dist>
+//assume sorted , locate subscript return <sub,BINSPAN>
 
 pair<int,int> locateSubscript(const vector<int> &listObj, vector<int>::const_iterator begin,vector<int>::const_iterator end, int queryVal);
 
