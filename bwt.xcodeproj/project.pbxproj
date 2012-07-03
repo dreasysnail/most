@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7804869415A25F70003562B5 /* FFT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7804869315A25F70003562B5 /* FFT.cpp */; };
 		7827F91015694A27003EAF34 /* motif.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7827F90F15694A27003EAF34 /* motif.cpp */; };
 		7863919E156297C200850697 /* bwt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7863919D156297C200850697 /* bwt.cpp */; };
 		786391A615629AF100850697 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 786391A515629AF100850697 /* main.cpp */; };
@@ -28,6 +29,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		7804869315A25F70003562B5 /* FFT.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FFT.cpp; sourceTree = "<group>"; };
+		7804869615A25F7B003562B5 /* FFT.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FFT.h; sourceTree = "<group>"; };
 		7827F90F15694A27003EAF34 /* motif.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = motif.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7827F91215694A33003EAF34 /* motif.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = motif.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		7863919D156297C200850697 /* bwt.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = bwt.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -78,6 +81,8 @@
 				7827F90F15694A27003EAF34 /* motif.cpp */,
 				7827F91215694A33003EAF34 /* motif.h */,
 				786391A0156298C200850697 /* bwt.h */,
+				7804869315A25F70003562B5 /* FFT.cpp */,
+				7804869615A25F7B003562B5 /* FFT.h */,
 				A536A4D7143AAB5100A4F152 /* bwt.1 */,
 				7885A7FE1568E86200C5DE99 /* temp.bed */,
 				78ACBF771574A613003217D6 /* temp.wig */,
@@ -141,6 +146,7 @@
 				786391A615629AF100850697 /* main.cpp in Sources */,
 				7885A7EB1568B83200C5DE99 /* common.cpp in Sources */,
 				7827F91015694A27003EAF34 /* motif.cpp in Sources */,
+				7804869415A25F70003562B5 /* FFT.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

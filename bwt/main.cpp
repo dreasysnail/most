@@ -13,6 +13,7 @@
 #include "bwt.h"
 #include "common.h"
 #include "motif.h"
+#include "FFT.h"
 //for directory
 #include <cstdlib>
 
@@ -22,7 +23,7 @@ using namespace std;
 
 extern char T[ MAX_LENGTH ];
 extern int N;
-void printUsage();
+
 extern int GenomeSize;
 extern Edge* Edges;
 extern Node* Nodes;
@@ -40,8 +41,8 @@ int main(int argc, char **argv)
     genomeRegions *gR = new genomeRegions(0);
     
     //for test
-    //test();
-    map<string,string> option;
+    test();
+    extern map<string,string> option;
     parseCommandLine(argc, argv,option);
     
         
@@ -51,36 +52,38 @@ int main(int argc, char **argv)
     Suffix active( 0, 0, -1 );  // The initial active prefix
     
     while (true) {
-
+        
+        string outPutDir(option["outdir"]); 
+        system(("rm -rf "+outPutDir).c_str());
+        if (system(("mkdir "+outPutDir).c_str()) != 0)
+            printAndExit("cannot make directory");
+        
+        //parsing fasta and region
+        gR->readFasta(option["fastafile"]);
+        gR->readBed(option["regionfile"]);
+        gR->mergeOverlap();
+        gR->getSeq(outPutDir);
+        //region-wide
+        switch (option["bkgregion"][0]) {
+            case 'r':
+            case 'R':
+                gR->initProb(2);
+                break;
+            default:
+                gR->initProb(1);
+                break;
+        } 
+        
+        //initiate T 
+        cerr<<"regionFile（bedFormat）:"<<option["regionfile"]<<endl;
+        GenomeSize = gR->appendReverseGenome(T);
+        t1=clock();
+        cerr<<"Parsing Fasta:"<<double((t1-tStart)/1e6)<<endl;
+        
+        
         // tag mode
         if (option["mode"]=="tag") {
-            /************************
-            2:tss.bed
-            3:fasta
-            4:histone.wig/histone.bed
-            6:output directory
-            ************************/
-            string outPutDir(option["outdir"]); 
-            system(("rm -rf "+outPutDir).c_str());
-            if (system(("mkdir "+outPutDir).c_str()) != 0)
-            {
-                cerr<<"cannot make directory"<<endl;
-                exit(1);
-            }
-            
-            
 
-            gR->readFasta(option["fastafile"]);
-            gR->readBed(option["regionfile"]);
-            gR->mergeOverlap();
-            gR->getSeq(outPutDir);
-            //region-wide
-            //gR->initProb(2);
-            //initiate T 
-            cerr<<"regionFile（bedFormat）:"<<option["regionfile"]<<endl;
-            GenomeSize = gR->catSeq(T);
-            t1=clock();
-            cerr<<"Parsing Fasta:"<<double((t1-tStart)/1e6)<<endl;
             
             string tagFileName(option["tagfile"]);
             //if tag file is wigfile
@@ -136,7 +139,7 @@ int main(int argc, char **argv)
                 Motif thisMotif(i);
                 //if (!thisMotif.noWildcard()) continue;
                 //order null
-                thisMotif.initProb((*gR),-1);
+                thisMotif.initProb((*gR),atoi(option["order"].c_str()));
                 thisMotif.loci = active.locateMotif(thisMotif);
                 
                 //cout<<allmotifs[i].loci.size()<<" "<<active.countString(allmotifs[i].query)<<endl;
@@ -152,6 +155,8 @@ int main(int argc, char **argv)
                     }
                     else {
                         clusterFile<<"filtered:\t"<<thisMotif.query<<"\t"<<thisMotif.score<<"\t"<<thisMotif.signif<<endl;
+                        // for test
+                        thisMotif.testMotifTag(*gR, outPutDir, true);
                     }
                 }
             }
@@ -176,8 +181,8 @@ int main(int argc, char **argv)
             Cluster temp0(qualifiedMotifs[0]);
             clusters.push_back(temp0);
             
-            for (int i=0; i<10; i++) qualifiedMotifs[i].testMotifTag(*gR,outPutDir,true);
-            // pair<int,int> tempa = qualifiedMotifs[2].editBINSPANance(qualifiedMotifs[4]);
+            // for (int i=0; i<10; i++) qualifiedMotifs[i].testMotifTag(*gR,outPutDir,true);
+            // pair<int,int> tempa = qualifiedMotifs[2].editDistance(qualifiedMotifs[4]);
             // cout<<tempa.first<<" "<<tempa.second<<endl;
             cerr<<"clustering:"<<endl;
             for (int i=1; i<maxMotifSize; i++) { 
@@ -236,12 +241,15 @@ int main(int argc, char **argv)
             nextMotif:
                 continue;
             }
+        
             //calculating
             for (int j=0; j<clusters.size(); j++){
-                clusters[j].trim();            
-                //cout<<clusters[i].loci.size()<<endl;
-                //cout<<clusters[i].loci.size()<<endl;
-                //calculate score for each cluster
+                clusters[j].trim();  
+                if (option["writeloci"]=="T") {
+                    fileName = outPutDir + "/clustersLoci.bed";
+                    ofstream lociFile(fileName.c_str(),ios::app);
+                    clusters[j].writeLoci(lociFile, *gR);
+                }
             }
             t4=clock();
             cerr<<"clustering:"<<double((t4-t3)/1e6)<<endl;
@@ -279,28 +287,6 @@ int main(int argc, char **argv)
             exit(0);
         }
         else if (option["mode"]=="normal") {
-    
-            string outPutDir(option["outdir"]); 
-            system(("rm -rf "+outPutDir).c_str());
-            if (system(("mkdir "+outPutDir).c_str()) != 0)
-            {
-                cerr<<"cannot make directory"<<endl;
-                exit(1);
-            }
-            
-            
-            
-            gR->readFasta(option["fastafile"]);
-            gR->readBed(option["regionfile"]);
-            gR->mergeOverlap();
-            gR->getSeq(outPutDir);
-            //region-wide
-            //gR->initProb(2);
-            //initiate T 
-            cerr<<"regionFile（bedFormat）:"<<option["regionfile"]<<endl;
-            GenomeSize = gR->catSeq(T);
-            t1=clock();
-            cerr<<"Parsing Fasta:"<<double((t1-tStart)/1e6)<<endl;
             //ofstream tfile("aa.fa");
             //tfile<<T<<endl;
             //cerr<<T<<endl;
@@ -405,11 +391,14 @@ int main(int argc, char **argv)
                 continue;
             }
             //calculating
+            string fileName;
             for (int j=0; j<clusters.size(); j++){
                 clusters[j].trim();            
-                //cout<<clusters[i].loci.size()<<endl;
-                //cout<<clusters[i].loci.size()<<endl;
-                //calculate score for each cluster
+                if (option["writeloci"]=="T") {
+                    fileName = outPutDir + "/clustersLoci.bed";
+                    ofstream lociFile(fileName.c_str(),ios::app);
+                    clusters[j].writeLoci(lociFile, *gR);
+                }
             }
             t4=clock();
             cerr<<"clustering:"<<double((t4-t3)/1e6)<<endl;
@@ -423,7 +412,7 @@ int main(int argc, char **argv)
             }
             
             //write pwm file;
-            string fileName = outPutDir + "/allmotif.pwm";
+            fileName = outPutDir + "/allmotif.pwm";
             ofstream pwmFile(fileName.c_str());
             if (!pwmFile) {
                 string errorInfo = "Error! Fail to open pwmFile for writing!";
@@ -451,32 +440,6 @@ int main(int argc, char **argv)
     }
 };
 
-void printUsage()
-{
-	string usage =	"----------------------------------------------------------------------\n";
-	usage		+=	"        Motif discovery system \n";
-	usage		+=	"        Developed by \n";
-	usage		+=	"        jeremy071242044@gmail.com\n";
-	usage		+=	"----------------------------------------------------------------------\n";
-	usage		+=	"    motif [option] <parameter1> <parameter2> \n";
-	usage		+=	"  Options:\n";
-	usage		+=	"    -m --manually input\t<DNA sequence file>\t<Annotation file>\n\t\tTrain CTF on dataset given in parameters\n\n";
-	usage		+=	"    -i --file\t<bed file>\t<DNA sequence file>\n\t\tPredict on DNA sequences\n\n";
-    usage		+=	"    -t --file\t<bed file>\t<DNA sequence file>\n\t<tag bed file>\tPredict on DNA sequences\n\n";
-	usage		+=	"    -h --help\n\t\tPrint help information.\n";
-    usage		+=	"    -d --debug\n\t\trun some test.\n";
-    usage		+=	"    ATTENTION:LAST FILE SHOULD BE SORTED";
-	cerr<<usage<<endl;
-    
-    cerr << "Normally, suffix trees require that the last\n"
-    << "character in the input string be unique.  If\n"
-    << "you don't do this, your tree will contain\n"
-    << "suffixes that don't end in leaf nodes.  This is\n"
-    << "often a useful requirement. You can build a tree\n"
-    << "in this program without meeting this requirement,\n"
-    << "but the validation code will flag it as being an\n"
-    << "invalid tree\n\n"<<endl;
-}
 
 
 void preInitialization(Edge* EdgesTemp,Node* NodesTemp){
@@ -488,13 +451,15 @@ void preInitialization(Edge* EdgesTemp,Node* NodesTemp){
 
 void test(){
     //test locateSub
-    int a[10]={0,3,10,14,20,30,40,60,90,120};
-    vector<int> b(a,a+10);
-    cerr<<b<<locateSubscript(b, b.begin(), b.end(), 120)<<endl;
+    int a[16]={1,3,10,14,20,30,40,60,90,120,80,20,10,30,50,45};
+    vector<int> b(a,a+16);
+    //cerr<<b<<locateSubscript(b, b.begin(), b.end(), 120)<<endl;
     //test
-    
-    
-    
+    FFT tempFFT(b);
+    cerr<<tempFFT.origin<<"\n";
+    cerr<<tempFFT.transformed<<"\n";
+    cerr<<tempFFT.invTrans<<"\n";
+    cerr<<endl;
     
     assert(0==1);
 }

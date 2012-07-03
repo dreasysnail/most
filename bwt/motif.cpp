@@ -113,10 +113,10 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
         vector<short int> &tag = gR.regionTags[gR.tagName[t]];
         string tagName = gR.tagName[t];
         //what's wrong with query.size()?  answer:   unsigned int always render the expression to be possitive
-        int counter = loci.size();
+        //int counter = loci.size();
         for (int i=0; i<loci.size(); i++) {
             if (loci[i]<SAMPLESIZE*BINSPAN+SAMPLESIZE*offset+1||loci[i]>GenomeSize-(SAMPLESIZE+1)*BINSPAN-SAMPLESIZE*offset+1) {
-                counter--;
+                //counter--;
                 continue;
             }
             int thisLociCenter = mapLoci(loci[i],gR.segmentStartPos);
@@ -135,20 +135,23 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
         for (int i=0; i<SAMPLESIZE*2+1; i++) {
             variance += (sumBin[i][t]-average)*(sumBin[i][t]-average);
             //normalization for KL divergence
-            sumBin[i][t] /= totalAround;
         }
-        //vector<float> temp(sumBin,sumBin+2*SAMPLESIZE);
-        //cout<<sumMotif<<temp<<average<<"var "<<variance<<" Counter"<<counter<<" height"<<logf(sumMotif/float(counter))<<endl;
-        //signif.push_back((sumMotif-average)/variance*logf(sumMotif/float(counter))) ;
-        signif.push_back(variance);
+        variance /= SAMPLESIZE*2;
+        /*
+        if (variance!=0) {
+            printMotif();
+            cerr<<sqrtf(variance)/average<<endl;
+        }
+        */
+        //coefficient of variation
+        signif.push_back(sqrtf(variance)/average);
         //cout<<sumMotif<<sumBin<<endl;
         //cout<<tagName<<" "<<query<<" "<<sumMotif<<" "<<" "<<(2*BINSPAN+query.size()-1)<<" "<<sumMotif/counter/(2*BINSPAN+query.size()-1)<<endl;
         if (ifDraw) {
             string fileName = outPutDir + "/motif.dist";
             ofstream distFile(fileName.c_str(),ios::app);
             if (!distFile) {
-                string errorInfo = "Error! Fail to open distFile for writing!";
-                printAndExit(errorInfo);
+                printAndExit("Error! Fail to open distFile for writing!");
             }
             distFile<<">"<<query<<"_Conscore_"<<score<<"_Tag_"<<tagName<<"_Sig_"<<signif<<"\n";
             for (int l=0; l<2*SAMPLESIZE+1; l++) {
@@ -156,7 +159,11 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
                 distFile<<pos<<"\t"<<sumBin[l][t]/4/BINSPAN<<"\n";
             }
             distFile<<endl;
-        }        
+        }
+        for (int i=0; i<SAMPLESIZE*2+1; i++) {
+            //normalization for KL divergence
+            sumBin[i][t] /= totalAround;
+        }
     }
 }
 
@@ -229,6 +236,44 @@ bool Motif::ascending(vector<char> &x,const vector<int> &traverseP,int &travInde
         return true;
     }
     return false;
+}
+
+bool Motif::writeLoci(ostream &s,const genomeRegions &gR){
+    string strand;
+    int startP = 0;
+    int endP = 0;
+    string chr;
+    pair<int,int> sub_dist;
+    s<<">"<<query<<"_lociSize"<<loci.size()<<"\n";
+    try {
+        for (int i=0; i<loci.size(); i++) {
+            sub_dist = locateSubscript(gR.segmentStartPos, gR.segmentStartPos.begin(), gR.segmentStartPos.end(), loci[i]);
+            if (sub_dist.first==-1) {
+                continue;
+            }
+            if (loci[i]<=GenomeSize/2) {
+                strand = "+";
+                chr = gR.segmentGenomePos[sub_dist.first].first;
+                startP = gR.segmentGenomePos[sub_dist.first].second+sub_dist.second;
+                endP = startP + query.size();
+            }
+            else if (loci[i]<=GenomeSize){
+                strand = "-";
+                chr = gR.segmentGenomePos[sub_dist.first].first;
+                endP = gR.segmentGenomePos[sub_dist.first].second + (gR.segmentStartPos[sub_dist.first]-gR.segmentStartPos[sub_dist.first-1]-sub_dist.second);
+                startP = endP - query.size();
+            }
+            else {
+                continue;
+            }
+            s<<chr<<"\t"<<startP<<"\t"<<endP<<"\t"<<strand<<"\n";
+        }
+    } catch (const exception &e) {
+        cerr<<"Write loci file err:"<<e.what()<<endl;
+        return false;
+    }
+    s<<endl;
+    return true;
 }
 
 //clustering methods
@@ -379,7 +424,7 @@ bool Cluster::unif(int pos){
 int Cluster::sumPWM(){
     totalPWM.clear();
     for (int i=0; i<pwm[0].size(); i++) {
-        totalPWM.push_back(pwm[0][i]+pwm[0][i]+pwm[0][i]+pwm[0][i]);
+        totalPWM.push_back(pwm[0][i]+pwm[1][i]+pwm[2][i]+pwm[3][i]);
     }
     return *max_element(totalPWM.begin(), totalPWM.end());
 }
@@ -464,7 +509,7 @@ float Motif::sumTagScore(){
 
 ostream &operator<<( ostream &s, const Motif &motif ){
     if (motif.signif.size()!=0) {
-        s<<">"<<motif.query<<"_Conscore_"<<motif.score<<"_Signif_"<<motif.signif;
+        s<<">"<<motif.query<<"_Conscore_"<<motif.score<<"_Signif_"<<motif.signif<<"\n";
     }
     else {
         s<<">"<<motif.query<<"_Conscore_"<<motif.score<<"\n";

@@ -1,31 +1,30 @@
 //
+//  bwt.cpp
+//  bwt
+//
+//  Created by zhang yizhe on 12-5-20.
+//  Copyright (c) 2012年 SJTU. All rights reserved.
+//
+//
 // Suffix tree creation
 //
-// Mark Nelson, updated December, 2006
+// we thank Mark Nelson for his open source
+// implement of Ukekknon algorithm
 //
-// This code has been tested with Borland C++ and
-// Microsoft Visual C++.
 //
-// This program asks you for a line of input, then
-// creates the suffix tree corresponding to the given
-// text. Additional code is provided to validate the
-// resulting tree after creation.
-//
+
 #include "bwt.h"
 extern int GenomeSize;
+
 //
 // This is the hash table where all the currently
-// defined edges are stored.  You can dump out
-// all the currently defined edges by iterating
-// through the table and finding edges whose start_node
-// is not -1.
+// defined edges are stored.  
 //
 
 Edge *Edges;
+
+// This is all nodes
 Node *Nodes;
-
-
-
 
 //
 // The array of defined nodes.  The count is 1 at the
@@ -43,6 +42,7 @@ int Node::Leaf = 1;
 // denotes the maximum index in the input buffer.
 //
 
+// This is the concatenated seq
 char T[ MAX_LENGTH ];
 int N;
 
@@ -56,15 +56,6 @@ Edge::Edge()
 
 
 
-//
-// I create new edges in the program while walking up
-// the set of suffixes from the active point to the
-// endpoint.  Each time I create a new edge, I also
-// add a new node for its end point.  The node entry
-// is already present in the Nodes[] array, and its
-// suffix node is set to -1 by the default Node() ctor,
-// so I don't have to do anything with it at this point.
-//
 
 Edge::Edge( int init_first, int init_last, int parent_node )
 {
@@ -74,7 +65,6 @@ Edge::Edge( int init_first, int init_last, int parent_node )
     end_node = Node::Count++;
     Nodes[end_node].father=start_node;
     
-    //custom(icarus)
     // Nodes[end_node].leaf_count_beneath=1;
 #ifdef display 
     Nodes[end_node].above_edge_first_char_index=init_first;
@@ -132,9 +122,7 @@ long int Edge::Hash( int node, int c )
 
 //
 // A given edge gets a copy of itself inserted into the table
-// with this function.  It uses a linear probe technique, which
-// means in the case of a collision, we just step forward through
-// the table until we find the first unused slot.
+// with this function. 
 //
 
 
@@ -150,13 +138,7 @@ void Edge::Insert()
 }
 
 //
-// Removing an edge from the hash table is a little more tricky.
-// You have to worry about creating a gap in the table that will
-// make it impossible to find other entries that have been inserted
-// using a probe.  Working around this means that after setting
-// an edge to be unused, we have to walk ahead in the table,
-// filling in gaps until all the elements can be found.
-//
+// Removing an edge from the hash table
 // Knuth, Sorting and Searching, Algorithm R, p. 527
 //
 
@@ -187,13 +169,7 @@ void Edge::Remove()
 }
 
 //
-// The whole reason for storing edges in a hash table is that it
-// makes this function fairly efficient.  When I want to find a
-// particular edge leading out of a particular node, I call this
-// function.  It locates the edge in the hash table, and returns
-// a copy of it.  If the edge isn't found, the edge that is returned
-// to the caller will have start_node set to -1, which is the value
-// used in the hash table to flag an unused entry.
+// find a particular edge leading a particular node
 //
 
 Edge Edge::Find( int node, int c )
@@ -201,7 +177,7 @@ Edge Edge::Find( int node, int c )
     long int i = Hash( node, c );
     for ( ; ; ) {
         if ( Edges[ i ].start_node == node ) 
-//poisonous when string changed, just take for granted that no collision occurs(icarus)
+//poisonous when string changed, just take for granted that no collision occurs
             if ( c == T[ Edges[ i ].first_char_index ] )
                 return Edges[ i ];
         if ( Edges[ i ].start_node == -1 )
@@ -211,21 +187,7 @@ Edge Edge::Find( int node, int c )
 }
 
 //
-// When a suffix ends on an implicit node, adding a new character
-// means I have to split an existing edge.  This function is called
-// to split an edge at the point defined by the Suffix argument.
-// The existing edge loses its parent, as well as some of its leading
-// characters.  The newly created edge descends from the original
-// parent, and now has the existing edge as a child.
-//
-// Since the existing edge is getting a new parent and starting
-// character, its hash table entry will no longer be valid.  That's
-// why it gets removed at the start of the function.  After the parent
-// and start char have been recalculated, it is re-inserted.
-//
-// The number of characters stolen from the original node and given
-// to the new node is equal to the number of characters in the suffix
-// argument, which is last - first + 1;
+// This function is called to split an edge at the point defined by the Suffix argument.
 //
 
 int Edge::SplitEdge( Suffix &s )
@@ -279,13 +241,7 @@ int Edge::SplitEdge( Suffix &s )
     //
 }
 
-//
-// This routine prints out the contents of the suffix tree
-// at the end of the program by walking through the
-// hash table and printing out all used edges.  It
-// would be really great if I had some code that will
-// print out the tree in a graphical fashion, but I don't!
-// ......
+
 /*
 
 void dump_edges( int current_n )
@@ -315,14 +271,9 @@ void dump_edges( int current_n )
 */
 
 //
-// A suffix in the tree is denoted by a Suffix structure
-// that denotes its last character.  The canonical
-// representation of a suffix for this algorithm requires
-// that the origin_node by the closest node to the end
-// of the tree.  To force this to be true, we have to
-// slide down every edge in our current path until we
-// reach the final node.
-// chose a branch to go on
+// The canonical representation of a suffix for this algorithm
+// requires that the origin_node by the closest node to the end
+// of the tree. 
 //
 
 void Suffix::Canonize()
@@ -342,22 +293,7 @@ void Suffix::Canonize()
 }
 
 //
-// This routine constitutes the heart of the algorithm.
-// It is called repetitively, once for each of the prefixes
-// of the input string.  The prefix in question is denoted
-// by the index of its last character.
-//
-// At each prefix, we start at the active point, and add
-// a new edge denoting the new last character, until we
-// reach a point where the new edge is not needed due to
-// the presence of an existing edge starting with the new
-// last character.  This point is the end point.
-//
-// Luckily for use, the end point just happens to be the
-// active point for the next pass through the tree.  All
-// we have to do is update it's last_char_index to indicate
-// that it has grown by a single character, and then this
-// routine can do all its work one more time.
+// heart of the algorithm.
 //
 
 void Suffix::AddPrefix(int current_index )
@@ -429,24 +365,7 @@ void Suffix::AddPrefix(int current_index )
 
 
 //
-// The validation code consists of two routines.  All it does
-// is traverse the entire tree.  walk_tree() calls itself
-// recursively, building suffix strings up as it goes.  When
-// walk_tree() reaches a leaf node, it checks to see if the
-// suffix derived from the tree matches the suffix starting
-// at the same point in the input text.  If so, it tags that
-// suffix as correct in the GoodSuffixes[] array.  When the tree
-// has been traversed, every entry in the GoodSuffixes array should
-// have a value of 1.
-//
-// In addition, the BranchCount[] array is updated while the tree is
-// walked as well.  Every count in the array has the
-// number of child edges emanating from that node.  If the node
-// is a leaf node, the value is set to -1.  When the routine
-// finishes, every node should be a branch or a leaf.  The number
-// of leaf nodes should match the number of suffixes (the length)
-// of the input string.  The total number of branches from all
-// nodes should match the node count.
+// The validation code 
 //
 /*
 char CurrentString[ MAX_LENGTH ];
@@ -535,7 +454,7 @@ int walk_tree( int start_node, int last_char_so_far )
 }
 */
 
-/******   my custom function   *******/
+/******   other custom function   *******/
 
 void Node::showNodeString(){
     //        std::string nodeString(&T[first_char_index],last_char_index-first_char_index);
@@ -802,18 +721,6 @@ void print_parents( ostream &s, int node)
 }
 
 
-
-
-//
-// This is the insertion operator that I use to load up the
-// data buffer from an input stream.  I also use the operator
-// to set N to the correct value, which is one greater than
-// the number of characters read in.  It is one greater because
-// we are going to return the special EOF character from position
-// T[N].  So for example, if you read in the string "ABC" from
-// the input stream, N will be 3, and T[3] will return 256.
-//
-
 istream &operator>>( istream &s, Buffer &b )
 {
     s >> b.data;
@@ -822,24 +729,6 @@ istream &operator>>( istream &s, Buffer &b )
     return s;
 }
 
-//
-// When you look up a character from the buffer object,
-// you actually get an Aux object.  This is okay, because
-// Aux has a casting operator for int.  If you are expecting
-// an int, the compiler will take care of converting for
-// you automatically.  If you are sending the object to
-// a stream, the Aux operator<<() will do that special
-// conversion for the special value of 256.
-//
-
-
-
-//
-// Finally, the special version of the output
-// stream insertion operator for objects of
-// type Aux.  The unique value of 256 triggers
-// some special output.
-//
 ostream &operator<<( ostream &s, Aux &a )
 {
     if ( a.i == 256 )
@@ -848,15 +737,6 @@ ostream &operator<<( ostream &s, Aux &a )
         s << (char) a.i;
     return s;
 }
-
-
-
-
-
-//
-// Many of the debugging routines in the program
-// use operator<<() to print out an edge.
-//
 
 ostream &operator<<( ostream &s, const Edge &edge )
 {

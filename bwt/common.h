@@ -15,6 +15,7 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <cassert>
 #include <map>
 
 using std::string;
@@ -26,13 +27,16 @@ using std::ostream;
 using std::pair;
 
 void parseCommandLine(int argc,char** argv,map<string, string> &option);
+void printUsage();
 
 //define motif length
 extern int K;
+extern map<string,string> option;
 #define DELTA 3
 //#define PSEUDO 0.001
 //#define MAXGENOME 2000000
 #define SAMPLESIZE 40
+const string MOSHVERSION = "Version 1.0 (2012-6-28)";
 //200M
 const long int MAX_LENGTH = 3e6;
 const long int HASH_TABLE_SIZE = 6e6;  //A prime roughly 10% larger
@@ -51,16 +55,13 @@ const int SHIFT = 3;
 const int MAXCLUSTERSIZE = 20;
 const int MAXREPEATCNT = 3;
 const float MAXKLDIV = 1;
-const int MINTAGSCORE = 0;
+const float MINTAGSCORE = 1;
 
 //cut tag extend bound
 const int EXTENDBOUND = (SAMPLESIZE+1)*BINSPAN+offset*SAMPLESIZE+1;
 
-#undef OUTFASTA
-//display for node string
-
-#undef display
-//#define display
+//FFT
+const float PI = 3.1416;
 
 
 
@@ -92,10 +93,10 @@ public:
     int extend;
     void getSeq(const string& outPutDir);
     void inline appendSeq(ostream &outFile,int startP,int endP,string &currentChr);
-    int catSeq(char* T);
+    int appendReverseGenome(char* T);
     void getTagBed(const string& thisHistone,const string& currentChr );    //get 0-1 sequence from bed file
     void appendTag(int a,int b,const string& chr,const string& thisHistone);
-    void appendReverse();
+    void appendReverseTag();
     void initProb(int mode);
     bool existChr(const string& chr){return find(chromeNames.begin(),chromeNames.end(),chr)==chromeNames.end()?false:true;}
     void printProb();
@@ -109,6 +110,8 @@ public:
     int segmentCount;
     //store subscript in genometag for starting pos of segment
     vector<int> segmentStartPos;
+    //store actual pos of each segment in genome.
+    vector<pair<string,int> > segmentGenomePos;
    
 };
 
@@ -216,12 +219,10 @@ inline int alp2num(const char& name){
     }
 }
 
-
 float pow1(float base,int index);
 string antisense(const string& tempString);
 char degenerate(char a,char b);
 //assume sorted , locate subscript return <sub,BINSPAN>
-
 pair<int,int> locateSubscript(const vector<int> &listObj, vector<int>::const_iterator begin,vector<int>::const_iterator end, int queryVal);
 
 

@@ -62,7 +62,9 @@ class Motif{
         }
     };
     string antisense(const string& tempString);
-    bool ascending(vector<char> &x,const vector<int> &traverseP,int &travIndex);   
+    bool ascending(vector<char> &x,const vector<int> &traverseP,int &travIndex); 
+    //write loci to file
+    bool writeLoci(ostream &s,const genomeRegions &gR);
     //inlines
     inline bool noWildcard();
     inline int wildcardNum();
@@ -75,6 +77,7 @@ class Motif{
     //print info
     void inline printMotif();  
     inline static string translate(int i);
+
 };
 
 class Cluster: public Motif{

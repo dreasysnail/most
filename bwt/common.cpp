@@ -11,9 +11,11 @@
 #include <cassert>
 #include <stdio.h>
 #include <stdlib.h>
+#include "FFT.h"
 using namespace std;
 
 int K;
+map<string,string> option;
 
 
 /***********************************************************************
@@ -51,6 +53,15 @@ void parseCommandLine(int argc,
     //
     option          ["order"]      =   "0";
     optionRequire   ["order"]      =   false;
+    //
+    option          ["writeloci"]      =  "T";
+    optionRequire   ["writeloci"]      =   false;
+    //
+    option          ["regionfile"]      =  "F";
+    optionRequire   ["regionfile"]      =   false;
+    //
+    option          ["bkgregion"]      =  "region";
+    optionRequire   ["bkgregion"]      =   false;
     // Parse the command line.
     string option_name = "";
     string option_value = "";
@@ -100,7 +111,16 @@ void parseCommandLine(int argc,
         } 
         else if (option_name == "-bo") {
             option["order"] = option_value;
-        } 
+        }
+        else if (option_name == "-locifile") {
+            option["writeloci"] = option_name;
+        }
+        else if (option_name == "-regionfile") {
+            option["regionfile"] = option_name;
+        }
+        else if (option_name == "-br") {
+            option["bkgregion"] = option_name;
+        }
         else {
             cerr<<"unrecognized option "<<option_name<<"! skip"<<endl;
             continue;
@@ -111,6 +131,7 @@ void parseCommandLine(int argc,
     for (map<string, bool>::iterator it=optionRequire.begin();it!=optionRequire.end();it++) {
         if (it->second) {
             cerr<<"option "<<it->first<<" need to be specified in command line"<<endl;
+            printUsage();
             exit(1);
         }
     }
@@ -128,6 +149,34 @@ void parseCommandLine(int argc,
     cerr<<endl;
     
 }
+
+void printUsage()
+{
+	string usage =	"*------------------------------------------*\n";
+	usage		+=	"        Mosh " + MOSHVERSION+"\n";
+	usage		+=	"        Developed by Yizhe Zhang, Chaochun Wei\n";
+	usage		+=	"        jeremy071242044@gmail.com\n";
+	usage		+=	"*------------------------------------------*\n\n";
+	usage		+=	"    mosh [option: <parameter1> <parameter2>]  \n\n";
+	usage		+=	"    Required Parameters:\n\n";
+	usage		+=	"    -m <normal/tag>\tRuning mode:tagfile should be specified if tag mode is selected\n\n";
+	usage		+=	"    -f <DNA sequence file>\tWhole genome DNA sequences\n\n";
+    usage		+=	"    -b <BED file>\tregions of interest\n\n";
+    usage		+=	"    -t <WIG file>\tTag file for Histone marks or other sources\n\n";
+    usage		+=	"    CAVEAT:WIG FILE SHOULD BE SORTED\n\n";
+	usage		+=	"    -h help\tPrint help information.\n\n";
+    usage		+=	"    Optional Parameters:\n\n";
+    usage		+=	"    -o <outputDIR>\tSpecify an output directory.\n\n";
+    usage		+=	"    -bo <0,1> \tOrder for background sequence\n\n";
+    usage		+=	"    -br <region/genome>\tspecify background sequence\n\n";
+    usage		+=	"    -locifile <T/F>\tWhether or not loci file of each cluster should be exported\n\n";
+    usage		+=	"    -regionfile <T/F>\tWhether or not loci file of each cluster should be exported\n\n";
+
+    
+    
+	cerr<<usage<<endl;
+}
+
 
 bool genomeRegions::readBed(const string &filename){
     ifstream bedFile(filename.c_str());
@@ -297,7 +346,7 @@ bool genomeRegions::readWig(const string &filename){
     //last histone's last chrome
     getTagBed(thisHistone,currentChr);
     //append reverse for antisense,for each histone
-    appendReverse();
+    appendReverseTag();
     return true;
 }
 
@@ -339,8 +388,9 @@ bool genomeRegions::readFasta(const string &filename){
             rawGenome[chr] += line;
         }
     }
-    
-    
+    for (vector<string>::iterator it=chromeNames.begin(); it!=chromeNames.end(); it++) {
+        genomeLength[*it] = rawGenome[*it].size();
+    }
 //  initProb(1);
 	return true;
 }
@@ -351,6 +401,7 @@ void genomeRegions::getSeq(const string& outPutDir){
     string fileName = outPutDir+"/allregions.fa";
     ofstream regionFile(fileName.c_str());
     vector<genomeRegion>::iterator it;
+
     //chr1-chr19-chrX
     for (it = genomes.begin(); it!=genomes.end(); it++) {
         appendSeq(regionFile,it->startP,it->endP,it->chr);
@@ -370,23 +421,32 @@ void genomeRegions::getSeq(const string& outPutDir){
 //appendSeq to 
 void inline genomeRegions::appendSeq(ostream &outFile,int startCut,int endCut,string &currentChr){
     //cout<<currentChr<<" "<<startCut<<" "<<endCut<<" "<<rawGenome[currentChr].substr(startCut,endCut-startCut+1)<<endl;
+    segmentCount++;
+    if (endCut<genomeLength[currentChr]-1) {
+        segmentStartPos.push_back(endCut-startCut+2+segmentStartPos.back());
+    }
+    else {
+        segmentStartPos.push_back(genomeLength[currentChr]+1-startCut+segmentStartPos.back());
+    }
+    segmentGenomePos.push_back(make_pair(currentChr, startCut));
+    
     try {
         if (endCut<=startCut+1) {
             return;
         }
         regionSeqs[currentChr] += rawGenome[currentChr].substr(startCut,endCut-startCut+1)+"#";
         //generate fasta
-    #ifdef OUTFASTA
-        outFile<<">"<<currentChr<<":"<<startCut<<"-"<<endCut<<"\n";
-        for (int i = startCut; i<endCut; i+=50) {
-            if (i+50 > endCut) {
-                outFile<<rawGenome[currentChr].substr(i,endCut-i)<<"\n";
-                break;
+        if (option["regionfile"]=="T") {
+            outFile<<">"<<currentChr<<":"<<startCut<<"-"<<endCut<<"\n";
+            for (int i = startCut; i<endCut; i+=50) {
+                if (i+50 > endCut) {
+                    outFile<<rawGenome[currentChr].substr(i,endCut-i)<<"\n";
+                    break;
+                }
+                outFile<<rawGenome[currentChr].substr(i,50)<<"\n";
             }
-            outFile<<rawGenome[currentChr].substr(i,50)<<"\n";
+            outFile<<endl;
         }
-        outFile<<endl;
-    #endif
     } catch (exception &e) {
         cerr<<e.what()<<endl;
         cerr<<"Seq insert error: chrome:"<<currentChr<<" start:"<<startCut<<" end:"<<endCut<<" chromesize"<<rawGenome[currentChr].size()<<endl;
@@ -395,7 +455,20 @@ void inline genomeRegions::appendSeq(ostream &outFile,int startCut,int endCut,st
 
 }
 
-int genomeRegions::catSeq(char* T){
+int genomeRegions::appendReverseGenome(char* T){
+    //extend segmentStartPos
+    assert(segmentStartPos.size()==segmentCount+1);
+    assert(segmentGenomePos.size()==segmentCount);
+    int Halfway = segmentStartPos.back();
+    segmentStartPos.back()++;
+    for (int i=segmentCount-1; i>=0; i--) {
+        segmentStartPos.push_back(Halfway-segmentStartPos[i]+Halfway+1);
+    }
+    //cout<<segmentStartPos.size()<<segmentStartPos<<endl;
+    //extend segmentGenomePos
+    for (int i=segmentCount-1; i>=0; i--) {
+        segmentGenomePos.push_back(segmentGenomePos[i]);
+    } 
     vector<string>::iterator chrit;
     long int offset=0;
     string tempString("");
@@ -531,16 +604,7 @@ void genomeRegions::getTagBed(const string& thisHistone,const string& currentChr
     rawTag[thisHistone][currentChr].swap(tempV);
 }
 
-void genomeRegions::appendTag(int a,int b,const string& chr,const string& thisHistone){
-    if (thisHistone==tagName[0]) {
-        segmentCount++;
-        if (b<genomeLength[chr]-1) {
-            segmentStartPos.push_back(b-a+2+segmentStartPos.back());
-        }
-        else {
-            segmentStartPos.push_back(genomeLength[chr]+1-a+segmentStartPos.back());
-        }
-    }    
+void genomeRegions::appendTag(int a,int b,const string& chr,const string& thisHistone){   
     try {
         for (int i=a-1-EXTENDBOUND; i<b+EXTENDBOUND; i++) {
             //if b exceed fasta's length
@@ -575,17 +639,8 @@ void genomeRegions::appendTag(int a,int b,const string& chr,const string& thisHi
     }
 }
 
-void genomeRegions::appendReverse(){
-    //extend segmentStartPos
-    assert(segmentStartPos.size()==segmentCount+1);
-    int Halfway = segmentStartPos.back();
-    segmentStartPos.back()++;
-    for (int i=segmentCount-1; i>=0; i--) {
-        segmentStartPos.push_back(Halfway-segmentStartPos[i]+Halfway+1);
-    }
-    //cout<<segmentStartPos.size()<<segmentStartPos<<endl;
-    
-    //extent genomeTag for each
+void genomeRegions::appendReverseTag(){
+    //extend genomeTag for each
     for (vector<string>::iterator tagIt=tagName.begin(); tagIt!=tagName.end(); tagIt++) {
         string thisHistone = *tagIt;
         vector<short int> temp(regionTags[thisHistone]);
