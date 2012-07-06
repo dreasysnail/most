@@ -22,10 +22,11 @@ public:
     vector<complex<float> > transformed;
     vector<complex<float> > origin;
     vector<complex<float> > invTrans;
-    FFT(const vector<int> &input);
+    FFT(const vector<float> &input);
     bool checkInput();
     //mode =0 for fft mode=1 for ifft
     void transform(const vector<complex<float> > &from, vector<complex<float> > &to, int mode);
+    float denoise(int rmCount);
     void bitReversal (vector<complex<float> > &vecC);
 };
 

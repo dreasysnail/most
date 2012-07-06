@@ -49,14 +49,6 @@ int N;
 
 
 
-Edge::Edge()
-{
-    start_node = -1;
-}
-
-
-
-
 Edge::Edge( int init_first, int init_last, int parent_node )
 {
     first_char_index = init_first;
@@ -66,23 +58,6 @@ Edge::Edge( int init_first, int init_last, int parent_node )
     Nodes[end_node].father=start_node;
     
     // Nodes[end_node].leaf_count_beneath=1;
-#ifdef display 
-    Nodes[end_node].above_edge_first_char_index=init_first;
-    //initialize new node's char index
-    Nodes[end_node].last_char_index=init_last+1;
-    
-    
-    int currentNode=end_node;
-    int fatherNode=parent_node;
-    int currentCharIndex;
-    while (fatherNode!=-1) {
-        currentCharIndex= Nodes[currentNode].above_edge_first_char_index;
-                
-        currentNode=fatherNode;
-        fatherNode=Nodes[fatherNode].father;
-    }
-    Nodes[end_node].first_char_index=currentCharIndex;
-#endif
     
     //Nodes[end_node].my_node_index=end_node;
 }
@@ -203,15 +178,7 @@ int Edge::SplitEdge( Suffix &s )
     
     
     
-    //update above edge first char index
-#ifdef display
-    int tempNode = new_edge -> end_node;
-    while (Nodes[tempNode].father!=0) {
-        tempNode=Nodes[tempNode].father;
-    }
-    Nodes[tempNode].above_edge_first_char_index = s.first_char_index;
-    
-#endif
+
     //
     
     
@@ -779,3 +746,4 @@ void Suffix::AddSuffixLink( int &last_parent, int parent)
     }
     last_parent = parent;
 }
+

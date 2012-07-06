@@ -105,7 +105,9 @@ inline int Motif::mapLoci(int genomePos,const vector<int>& StartPs){
 
 
 void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
+    noise=0;
     assert(loci.size()!=0);
+    assert(lociScore.size()==loci.size());
     //only need loci and tagSeq
     signif.clear();
     initBin(gR);
@@ -114,6 +116,7 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
         string tagName = gR.tagName[t];
         //what's wrong with query.size()?  answer:   unsigned int always render the expression to be possitive
         //int counter = loci.size();
+        float totalAround=0;
         for (int i=0; i<loci.size(); i++) {
             if (loci[i]<SAMPLESIZE*BINSPAN+SAMPLESIZE*offset+1||loci[i]>GenomeSize-(SAMPLESIZE+1)*BINSPAN-SAMPLESIZE*offset+1) {
                 //counter--;
@@ -122,29 +125,42 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
             int thisLociCenter = mapLoci(loci[i],gR.segmentStartPos);
             for (int l=0; l<2*SAMPLESIZE+1; l++) {
                 for (int j=(l-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j<(l+1-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j++) {
-                    sumBin[l][t] += tag[thisLociCenter+j];
+                    sumBin[l][t] += tag[thisLociCenter+j]*lociScore[i];
                 }
             }
         }
-        float totalAround=0;
-        float variance = 0;
         for (int i=0; i<SAMPLESIZE*2+1; i++) {
             totalAround += sumBin[i][t];
         }
-        float average = totalAround/(SAMPLESIZE*2+1);
         for (int i=0; i<SAMPLESIZE*2+1; i++) {
-            variance += (sumBin[i][t]-average)*(sumBin[i][t]-average);
             //normalization for KL divergence
+            sumBin[i][t] /= totalAround;
+        }
+        float variance = 0;
+        //FFT
+        if (option["FFT"]=="T") {
+            vector<float> tempVec;
+            for (int i=0; i<SAMPLESIZE*2; i++) {
+                tempVec.push_back(sumBin[i][t]);
+            }
+            FFT tempFFT(tempVec);
+            noise += tempFFT.denoise(int(SAMPLESIZE*5/8))*NOISEMULTIPLER;
+            for (int i=0; i<SAMPLESIZE*2; i++) {
+                sumBin[i][t]=tempFFT.invTrans[i].real();
+            }
+        }
+        for (int i=0; i<SAMPLESIZE*2+1; i++) {
+            variance += pow1(sumBin[i][t]-1/float(2*SAMPLESIZE+1),2);
         }
         variance /= SAMPLESIZE*2;
         /*
-        if (variance!=0) {
-            printMotif();
-            cerr<<sqrtf(variance)/average<<endl;
-        }
-        */
+         if (variance!=0) {
+         printMotif();
+         cerr<<sqrtf(variance)/average<<endl;
+         }
+         */
         //coefficient of variation
-        signif.push_back(sqrtf(variance)/average);
+        signif.push_back(sqrtf(variance));
         //cout<<sumMotif<<sumBin<<endl;
         //cout<<tagName<<" "<<query<<" "<<sumMotif<<" "<<" "<<(2*BINSPAN+query.size()-1)<<" "<<sumMotif/counter/(2*BINSPAN+query.size()-1)<<endl;
         if (ifDraw) {
@@ -160,12 +176,13 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
             }
             distFile<<endl;
         }
-        for (int i=0; i<SAMPLESIZE*2+1; i++) {
-            //normalization for KL divergence
-            sumBin[i][t] /= totalAround;
-        }
+        
+
+        
     }
 }
+
+
 
 void Motif::initBin(genomeRegions &gR){
     int tagSize = gR.tagName.size();
@@ -173,7 +190,7 @@ void Motif::initBin(genomeRegions &gR){
         sumBin[l].assign(tagSize, 0);
     }
 }
-
+//score methods
 
 void Motif::initProb(const genomeRegions& gR,int order){
     float probBackgrd[4]={0.2,0.3,0.3,0.2};
@@ -238,7 +255,11 @@ bool Motif::ascending(vector<char> &x,const vector<int> &traverseP,int &travInde
     return false;
 }
 
+//loci methods
+
 bool Motif::writeLoci(ostream &s,const genomeRegions &gR){
+    //cerr<<query<<lociScore.size()<<" "<<loci.size()<<endl;
+    assert(lociScore.size()==loci.size());
     string strand;
     int startP = 0;
     int endP = 0;
@@ -266,7 +287,7 @@ bool Motif::writeLoci(ostream &s,const genomeRegions &gR){
             else {
                 continue;
             }
-            s<<chr<<"\t"<<startP<<"\t"<<endP<<"\t"<<strand<<"\n";
+            s<<chr<<"\t"<<startP<<"\t"<<endP<<"\t"<<strand<<"\t"<<lociScore[i]<<"\n";
         }
     } catch (const exception &e) {
         cerr<<"Write loci file err:"<<e.what()<<endl;
@@ -276,8 +297,15 @@ bool Motif::writeLoci(ostream &s,const genomeRegions &gR){
     return true;
 }
 
-//clustering methods
 
+void Motif::initLoci(){
+    lociScore.clear();
+    lociScore.assign(loci.size(), 1);
+}
+
+
+
+//clustering methods
 
 
 pair<int,int> Cluster::editDistance(const Motif& m){
@@ -396,14 +424,33 @@ float Cluster::histoneDistrDistance(const Motif& m){
     return temp;
 }
 
+void Cluster::mergeLoci(){
+    lociScore.clear();
+    sort(loci.begin(),loci.end());
+    vector<int> newloci(loci.begin(),loci.begin()+1);
+    lociScore.push_back(1);
+    for (int i=1; i<loci.size(); i++) {
+        assert(lociScore.size()==newloci.size());
+        if (loci[i]-newloci.back()<=query.size()) {
+            lociScore.back()++;
+        }
+        else {
+            newloci.push_back(loci[i]);
+            lociScore.push_back(1);
+        }
+    }
+    loci.swap(newloci);
+}
+
 void Cluster::trim(){
     int start = 0;
     int end = query.size()-1;
     int maxPWM = sumPWM();
-    while (unif(start)||totalPWM[start]<maxPWM/100) {
+    int trimMultiper = atoi(option["trim"].c_str());
+    while (unif(start)||totalPWM[start]<maxPWM/trimMultiper) {
         start++;
     }
-    while (unif(start)||totalPWM[end]<maxPWM/100) {
+    while (unif(start)||totalPWM[end]<maxPWM/trimMultiper) {
         end--;
     }
     query = query.substr(start,end-start+1);
@@ -413,6 +460,7 @@ void Cluster::trim(){
         pwm[j].swap(tempVec);
     }
 }
+
 bool Cluster::unif(int pos){
     for (int i=0; i<4; i++) {
         if (pwm[i][pos]/totalPWM[pos]<0.2||pwm[i][pos]/totalPWM[pos]>0.3)
@@ -478,9 +526,6 @@ void Cluster::calPWM(const Motif& m,int optimShift){
 
     //    cout<<query<<endl;
 }
-
-
-
 
 
 

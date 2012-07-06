@@ -35,8 +35,10 @@ class Motif{
     //conserve score;
     float score;
     float overallScore;
+    float noise;
+    
     //index
-    Motif(int i):index(i),overallScore(0),score(0),motifProb(0)
+    Motif(int i):index(i),overallScore(0),score(0),motifProb(0),noise(0)
                 {query = translate(index);
                 pwm[0].assign(K, 0);
                 pwm[1].assign(K, 0);
@@ -64,7 +66,10 @@ class Motif{
     string antisense(const string& tempString);
     bool ascending(vector<char> &x,const vector<int> &traverseP,int &travIndex); 
     //write loci to file
+    //score for each occurence
+    vector<int> lociScore;
     bool writeLoci(ostream &s,const genomeRegions &gR);
+    void initLoci();
     //inlines
     inline bool noWildcard();
     inline int wildcardNum();
@@ -77,7 +82,7 @@ class Motif{
     //print info
     void inline printMotif();  
     inline static string translate(int i);
-
+    
 };
 
 class Cluster: public Motif{
@@ -89,6 +94,7 @@ public:
     float histoneDistrDistance(const Motif& m);
     void calPWM(const Motif& m,int optimShift);
     inline void appendLoci(const Motif& m);
+    void mergeLoci();
     void trim();
     bool unif(int pos);
     //sumpwm for trim
@@ -115,18 +121,47 @@ inline bool Motif::implicit(){
         return true;
     }
 }
-
+//remove TTTTTT TTATTT ATTTTT ATATAT
 inline bool Motif::isRepeat(){
     int counter = 0;
     for (int i=1; i<K; i++) {
         if (query[i]!=query[0]) {
             counter++;
         }
-        if (counter>=MAXREPEATCNT) {
+        if (counter>=1&&query[i]!=query[1]) {
             return false;
         }
     }
-    return true;
+    //TTTTTT TTATTT
+    if (counter==1||counter==0) {
+        return true;
+    }
+    //ATTTTT
+    bool flag=true;
+    for (int i=2; i<K; i++) {
+        if (query[i]!=query[1]) {
+            flag=false;
+        }
+    }
+    if (flag) {
+        return true;
+    }
+    //ATATAT
+    flag = true;
+    for (int i=2; i<K; i+=2) {
+        if (query[i]!=query[0]) {
+            flag=false;
+        }
+    }
+    for (int i=3; i<K; i+=2) {
+        if (query[i]!=query[1]) {
+            flag=false;
+        }
+    }
+    if (flag) {
+        return true;
+    }
+    return false;
 }
 
 inline int Motif::wildcardNum(){

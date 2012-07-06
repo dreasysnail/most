@@ -26,7 +26,7 @@ using std::endl;
 using std::ostream;
 using std::pair;
 
-void parseCommandLine(int argc,char** argv,map<string, string> &option);
+void parseCommandLine(int argc,char** argv);
 void printUsage();
 
 //define motif length
@@ -35,11 +35,11 @@ extern map<string,string> option;
 #define DELTA 3
 //#define PSEUDO 0.001
 //#define MAXGENOME 2000000
-#define SAMPLESIZE 40
+#define SAMPLESIZE 32
 const string MOSHVERSION = "Version 1.0 (2012-6-28)";
 //200M
-const long int MAX_LENGTH = 3e6;
-const long int HASH_TABLE_SIZE = 6e6;  //A prime roughly 10% larger
+const long int MAX_LENGTH = 2e6;
+const long int HASH_TABLE_SIZE = 4e6;  //A prime roughly 10% larger
 //tag counter parameters
 const int BINSPAN=10;     //range               
 const int offset=30;    //gap
@@ -51,11 +51,14 @@ const int offset=30;    //gap
 const int CLUSTERMAX = 25;
 const int MOTIFMAX = 250;
 const int MAXDISTANCE = 14;
-const int SHIFT = 3;
+const int SHIFT = atoi(option["k"].c_str())/3;
 const int MAXCLUSTERSIZE = 20;
-const int MAXREPEATCNT = 3;
 const float MAXKLDIV = 1;
-const float MINTAGSCORE = 1;
+//noise vs std  half to half
+const float MINTAGSCORE = 0.05;
+const int NOISEMULTIPLER = 70;
+const float MAXNOISE = 0.0002*NOISEMULTIPLER*3;
+
 
 //cut tag extend bound
 const int EXTENDBOUND = (SAMPLESIZE+1)*BINSPAN+offset*SAMPLESIZE+1;

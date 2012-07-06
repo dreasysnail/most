@@ -39,9 +39,8 @@ void FFT::bitReversal (vector<complex<float> > &vecC)
 }
 
 //Cooley-Tukey algorithm
-// 快速傅立叶变换，将复数 x 变换后仍保存在 x 中，xreal, ximag 分别是 x 的实部和虚部
-FFT::FFT(const vector<int> &input)
-{
+
+FFT::FFT(const vector<float> &input){
     
     inputSize = input.size();
     if (!checkInput())
@@ -49,10 +48,20 @@ FFT::FFT(const vector<int> &input)
     for (int i=0; i<input.size(); i++) {
         origin.push_back(complex<float> (input[i],0));
     }
-    transform(origin,transformed,0);
-    transform(transformed,invTrans,1);
+    
 }
-
+float FFT::denoise(int rmCount){
+    transform(origin,transformed,0);
+    float noise=0;
+    for (int i=inputSize/2-rmCount; i<inputSize/2; i++) {
+        noise += norm(transformed[i]);
+        transformed[i]=complex<float> (0.0,0.0);
+        transformed[inputSize-i]=complex<float> (0.0,0.0);
+        
+    }
+    transform(transformed,invTrans,1);
+    return noise;
+}
 bool FFT::checkInput(){
     int temp = inputSize;
     while (temp!=1) {

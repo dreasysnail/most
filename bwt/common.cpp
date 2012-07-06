@@ -24,8 +24,7 @@ map<string,string> option;
  *
  ***********************************************************************/
 void parseCommandLine(int argc,
-                      char** argv,
-                      map<string, string> &option
+                      char** argv
                       ) {
     
     // Set default values for command line arguments
@@ -57,11 +56,17 @@ void parseCommandLine(int argc,
     option          ["writeloci"]      =  "T";
     optionRequire   ["writeloci"]      =   false;
     //
-    option          ["regionfile"]      =  "F";
-    optionRequire   ["regionfile"]      =   false;
+    option          ["writeregion"]      =  "F";
+    optionRequire   ["writeregion"]      =   false;
     //
     option          ["bkgregion"]      =  "region";
     optionRequire   ["bkgregion"]      =   false;
+    //
+    option          ["FFT"]      =  "T";
+    optionRequire   ["FFT"]      =   false;
+    //
+    option          ["trim"]      =  "50";
+    optionRequire   ["trim"]      =   false;
     // Parse the command line.
     string option_name = "";
     string option_value = "";
@@ -70,6 +75,7 @@ void parseCommandLine(int argc,
     // Read the next option, and break if we're done.
     for (int i=1; i<argc-1; i+=2) {
         option_name = argv[i];
+        transform(option_name.begin(), option_name.end(), option_name.begin(), ::tolower);
         option_value = argv[i+1];
         cerr<<"("<<option_name<<" "<<option_value<<") ";
         // Assign the parsed value to the appropriate variable
@@ -83,10 +89,12 @@ void parseCommandLine(int argc,
                 
             }
             else if (option_value=="help") {
-                
+                printUsage();
+                exit(0);
             }
             else {
                 cerr<<"wrong mode!"<<endl;
+                printUsage();
                 exit(1);
             }
         } 
@@ -104,7 +112,6 @@ void parseCommandLine(int argc,
         } 
         else if (option_name == "-o") {
             option["outdir"] = option_value;
-            optionRequire["outdir"] = false;
         } 
         else if (option_name == "-k") {
             option["k"] = option_value;
@@ -116,10 +123,19 @@ void parseCommandLine(int argc,
             option["writeloci"] = option_name;
         }
         else if (option_name == "-regionfile") {
-            option["regionfile"] = option_name;
+            option["writeregion"] = option_name;
         }
         else if (option_name == "-br") {
             option["bkgregion"] = option_name;
+        }
+        else if (option_name == "-fft") {
+            option["FFT"] = option_name;
+            if (option["FFT"]=="T"&&option_value!="tag") {
+                printAndExit("Mode must be tag if FFT is chosen");
+            }
+        }
+        else if (option_name == "-trim") {
+            option["trim"] = option_name;
         }
         else {
             cerr<<"unrecognized option "<<option_name<<"! skip"<<endl;
@@ -171,6 +187,8 @@ void printUsage()
     usage		+=	"    -br <region/genome>\tspecify background sequence\n\n";
     usage		+=	"    -locifile <T/F>\tWhether or not loci file of each cluster should be exported\n\n";
     usage		+=	"    -regionfile <T/F>\tWhether or not loci file of each cluster should be exported\n\n";
+    usage		+=	"    -fft <T/F>\tWhether or not to cast FFT on each bins(default T)\n\n";
+    usage		+=	"    -trim <10-100 integer>\tlarger trimer means larger length of cluster\n\n";
 
     
     
@@ -436,7 +454,7 @@ void inline genomeRegions::appendSeq(ostream &outFile,int startCut,int endCut,st
         }
         regionSeqs[currentChr] += rawGenome[currentChr].substr(startCut,endCut-startCut+1)+"#";
         //generate fasta
-        if (option["regionfile"]=="T") {
+        if (option["writeregion"]=="T") {
             outFile<<">"<<currentChr<<":"<<startCut<<"-"<<endCut<<"\n";
             for (int i = startCut; i<endCut; i+=50) {
                 if (i+50 > endCut) {

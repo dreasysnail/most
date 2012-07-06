@@ -17,6 +17,7 @@
 #include <algorithm>
 #include "common.h"
 #include "motif.h"
+#include "FFT.h"
 using std::cout;
 using std::cin;
 using std::cerr;
@@ -74,7 +75,7 @@ public :
     int start_node;
     void Insert();
     void Remove();
-    Edge();
+    Edge():start_node(-1){};
     Edge( int init_first_char_index,
          int init_last_char_index,
          int parent_node );
@@ -101,13 +102,7 @@ public :
     static int Leaf;
     
     //my custome variance
-#ifdef display
-    //      int my_node_index;    
-    //  int first_char_index;
-    //  int last_char_index;
-    // int above_edge_first_char_index;
-    //  int leaf_count_beneath;
-#endif    
+
     
 
     
