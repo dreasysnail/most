@@ -17,6 +17,11 @@
 #include <string>
 #include <cassert>
 #include <map>
+#include <cassert>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdexcept>
+
 
 using std::string;
 using std::vector;
@@ -25,39 +30,41 @@ using std::cerr;
 using std::endl;
 using std::ostream;
 using std::pair;
+#define SAMPLESIZE 32
 
 void parseCommandLine(int argc,char** argv);
 void printUsage();
 
 //define motif length
 extern int K;
+extern float DELTA;
 extern map<string,string> option;
-#define DELTA 3
-//#define PSEUDO 0.001
-//#define MAXGENOME 2000000
-#define SAMPLESIZE 32
+
+
 const string MOSHVERSION = "Version 1.0 (2012-6-28)";
+
+
+
 //200M
-const long int MAX_LENGTH = 2e6;
-const long int HASH_TABLE_SIZE = 4e6;  //A prime roughly 10% larger
+const long int MAX_LENGTH = 3e6;
+const long int HASH_TABLE_SIZE = 2*MAX_LENGTH;  //A prime roughly 10% larger
 //tag counter parameters
 const int BINSPAN=10;     //range               
 const int offset=30;    //gap
+//must be power of 2
 
 //const float SINGIFTHRESH = 2;
 //const float SCORETHRESH =5;
 
 //cluster
-const int CLUSTERMAX = 25;
-const int MOTIFMAX = 250;
-const int MAXDISTANCE = 14;
-const int SHIFT = atoi(option["k"].c_str())/3;
-const int MAXCLUSTERSIZE = 20;
-const float MAXKLDIV = 1;
+const int MAXCLUSTERNUM = 40;
+const int MAXMOTIFNUM = 800;
+const int MAXDISTANCE = 12;
+const int SHIFT = 2;
+const float MAXKLDIV = 0.05;
 //noise vs std  half to half
-const float MINTAGSCORE = 0.05;
-const int NOISEMULTIPLER = 70;
-const float MAXNOISE = 0.0002*NOISEMULTIPLER*3;
+const int NOISEWEIGHT = 10000;
+const int STDWEIGHT = 1000;
 
 
 //cut tag extend bound
@@ -97,8 +104,8 @@ public:
     void getSeq(const string& outPutDir);
     void inline appendSeq(ostream &outFile,int startP,int endP,string &currentChr);
     int appendReverseGenome(char* T);
-    void getTagBed(const string& thisHistone,const string& currentChr );    //get 0-1 sequence from bed file
-    void appendTag(int a,int b,const string& chr,const string& thisHistone);
+    void getTagBed(const string& thistag,const string& currentChr );    //get 0-1 sequence from bed file
+    void appendTag(int a,int b,const string& chr,const string& thistag);
     void appendReverseTag();
     void initProb(int mode);
     bool existChr(const string& chr){return find(chromeNames.begin(),chromeNames.end(),chr)==chromeNames.end()?false:true;}
@@ -227,6 +234,8 @@ string antisense(const string& tempString);
 char degenerate(char a,char b);
 //assume sorted , locate subscript return <sub,BINSPAN>
 pair<int,int> locateSubscript(const vector<int> &listObj, vector<int>::const_iterator begin,vector<int>::const_iterator end, int queryVal);
-
-
+float calPhi(float x);
+float LogOnePlusX(float x);
+float RationalApproximation(float t);
+float NormalCDFInverse(float p);
 #endif

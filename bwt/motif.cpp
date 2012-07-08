@@ -105,11 +105,10 @@ inline int Motif::mapLoci(int genomePos,const vector<int>& StartPs){
 
 
 void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
-    noise=0;
     assert(loci.size()!=0);
-    assert(lociScore.size()==loci.size());
     //only need loci and tagSeq
-    signif.clear();
+    tagSTD.clear();
+    tagNoise.clear();
     initBin(gR);
     for (int t=0; t<gR.tagName.size(); t++) {
         vector<short int> &tag = gR.regionTags[gR.tagName[t]];
@@ -125,7 +124,7 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
             int thisLociCenter = mapLoci(loci[i],gR.segmentStartPos);
             for (int l=0; l<2*SAMPLESIZE+1; l++) {
                 for (int j=(l-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j<(l+1-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j++) {
-                    sumBin[l][t] += tag[thisLociCenter+j]*lociScore[i];
+                    sumBin[l][t] += tag[thisLociCenter+j];
                 }
             }
         }
@@ -144,7 +143,7 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
                 tempVec.push_back(sumBin[i][t]);
             }
             FFT tempFFT(tempVec);
-            noise += tempFFT.denoise(int(SAMPLESIZE*5/8))*NOISEMULTIPLER;
+            tagNoise.push_back(tempFFT.denoise(int(SAMPLESIZE*5/8))*NOISEWEIGHT);
             for (int i=0; i<SAMPLESIZE*2; i++) {
                 sumBin[i][t]=tempFFT.invTrans[i].real();
             }
@@ -153,14 +152,7 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
             variance += pow1(sumBin[i][t]-1/float(2*SAMPLESIZE+1),2);
         }
         variance /= SAMPLESIZE*2;
-        /*
-         if (variance!=0) {
-         printMotif();
-         cerr<<sqrtf(variance)/average<<endl;
-         }
-         */
-        //coefficient of variation
-        signif.push_back(sqrtf(variance));
+        tagSTD.push_back(sqrtf(variance)*STDWEIGHT);
         //cout<<sumMotif<<sumBin<<endl;
         //cout<<tagName<<" "<<query<<" "<<sumMotif<<" "<<" "<<(2*BINSPAN+query.size()-1)<<" "<<sumMotif/counter/(2*BINSPAN+query.size()-1)<<endl;
         if (ifDraw) {
@@ -169,7 +161,7 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
             if (!distFile) {
                 printAndExit("Error! Fail to open distFile for writing!");
             }
-            distFile<<">"<<query<<"_Conscore_"<<score<<"_Tag_"<<tagName<<"_Sig_"<<signif<<"\n";
+            distFile<<">"<<query<<"_P_value_"<<pvalue()<<"_Tag_"<<tagName<<"_Sig_"<<tagSTD<<"\n";
             for (int l=0; l<2*SAMPLESIZE+1; l++) {
                 int pos = (l-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE);
                 distFile<<pos<<"\t"<<sumBin[l][t]/4/BINSPAN<<"\n";
@@ -298,7 +290,7 @@ bool Motif::writeLoci(ostream &s,const genomeRegions &gR){
 }
 
 
-void Motif::initLoci(){
+void Motif::initLociScore(){
     lociScore.clear();
     lociScore.assign(loci.size(), 1);
 }
@@ -414,7 +406,7 @@ void Cluster::concatenate(const Motif& m,int index,int optimShift){
     //    cout<<query<<endl;
 }
 //calculate KL divergence: motif to cluster
-float Cluster::histoneDistrDistance(const Motif& m){
+float Cluster::tagDistrDistance(const Motif& m){
     float temp = 0;
     for (int t=0; t<sumBin[0].size(); t++) {
         for (int l=0; l<SAMPLESIZE*2+1; l++) {
@@ -530,35 +522,44 @@ void Cluster::calPWM(const Motif& m,int optimShift){
 
 
 void Motif::sumOverallScore(){
-    overallScore = score*score;
-    float tempScore = 0;
-    if (signif.size()==0) {
-        return;
+    float STDScore = 0;
+    if (tagSTD.size()>0) {
+        for(int i=0;i<tagSTD.size();i++){
+            STDScore += tagSTD[i];
+        }
+        STDScore /= tagSTD.size();
     }
-    for(int i=0;i<signif.size();i++){
-        tempScore += signif[i];
+    float noiseScore = 0;
+    if (tagNoise.size()>0) {
+        for(int i=0;i<tagNoise.size();i++){
+            noiseScore += tagNoise[i];
+        }
+        noiseScore /= tagNoise.size();
     }
-    overallScore *= tempScore+0.0001;
+    overallScore = score+STDScore-noiseScore+0.0001;
 }
 
 float Motif::sumTagScore(){
     float tempScore = 0;
-    if (signif.size()==0) {
+    if (tagSTD.size()==0) {
         return 0;
     }
-    for(int i=0;i<signif.size();i++){
-        tempScore += signif[i];
+    for(int i=0;i<tagSTD.size();i++){
+        tempScore += tagSTD[i];
     }
     return tempScore;
 }
 
-ostream &operator<<( ostream &s, const Motif &motif ){
-    if (motif.signif.size()!=0) {
-        s<<">"<<motif.query<<"_Conscore_"<<motif.score<<"_Signif_"<<motif.signif<<"\n";
+
+ostream &operator<<( ostream &s, Motif &motif ){
+    s<<">"<<motif.query<<"_Pvalue_"<<motif.pvalue();
+    if (motif.tagSTD.size()!=0) {
+        s<<"_tagSTD_"<<motif.tagSTD;
     }
-    else {
-        s<<">"<<motif.query<<"_Conscore_"<<motif.score<<"\n";
+    if (motif.tagNoise.size()!=0) {
+        s<<"_tagNoise_"<<motif.tagNoise;
     }
+    s<<"\n";
     for (int i=0; i<4; i++) {
         for (int j=0; j<motif.pwm[i].size(); j++) {
             s<<motif.pwm[i][j]<<'\t';

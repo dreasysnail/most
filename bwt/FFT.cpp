@@ -42,6 +42,7 @@ void FFT::bitReversal (vector<complex<float> > &vecC)
 
 FFT::FFT(const vector<float> &input){
     
+    
     inputSize = input.size();
     if (!checkInput())
         cerr<<"FFT should have input size as a power of 2"<<std::endl;
@@ -52,15 +53,15 @@ FFT::FFT(const vector<float> &input){
 }
 float FFT::denoise(int rmCount){
     transform(origin,transformed,0);
-    float noise=0;
+    float tagNoise=0;
     for (int i=inputSize/2-rmCount; i<inputSize/2; i++) {
-        noise += norm(transformed[i]);
+        tagNoise += norm(transformed[i]);
         transformed[i]=complex<float> (0.0,0.0);
         transformed[inputSize-i]=complex<float> (0.0,0.0);
         
     }
     transform(transformed,invTrans,1);
-    return noise;
+    return tagNoise;
 }
 bool FFT::checkInput(){
     int temp = inputSize;

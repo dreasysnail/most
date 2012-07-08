@@ -18,6 +18,9 @@
 #include "common.h"
 using std::cout;
 using std::endl;
+using std::string;
+using std::vector;
+
 class Motif{
     public:
     string query;
@@ -26,7 +29,7 @@ class Motif{
     vector<int> pwm[4];
     //bool overThresh;
     vector<int> loci;
-    vector<float> signif;
+    vector<float> tagSTD;
     float motifProb;
     //each vector is a bin   sumBin[bin][tag]
     vector<float> sumBin[2*SAMPLESIZE+1];
@@ -35,10 +38,10 @@ class Motif{
     //conserve score;
     float score;
     float overallScore;
-    float noise;
+    vector<float> tagNoise;
     
     //index
-    Motif(int i):index(i),overallScore(0),score(0),motifProb(0),noise(0)
+    Motif(int i):index(i),overallScore(0),score(0),motifProb(0)
                 {query = translate(index);
                 pwm[0].assign(K, 0);
                 pwm[1].assign(K, 0);
@@ -55,21 +58,24 @@ class Motif{
     void initPWM();
     //void calPWM(const vector<Motif>& allmotifs);
     void calConscore(int nSize){
-        float Thresh = motifProb*nSize*DELTA;
-        if (loci.size()>Thresh){
-            score = int(loci.size()*1000/Thresh)/1000.0;
+        float Thresh = motifProb*nSize;
+        if (loci.size()>Thresh*DELTA){
+            score = loci.size()/Thresh;
         }
         else {
             score = 0;
         }
     };
+    float pvalue(){
+        return 1-calPhi(score-1);
+    }
     string antisense(const string& tempString);
     bool ascending(vector<char> &x,const vector<int> &traverseP,int &travIndex); 
     //write loci to file
     //score for each occurence
     vector<int> lociScore;
     bool writeLoci(ostream &s,const genomeRegions &gR);
-    void initLoci();
+    void initLociScore();
     //inlines
     inline bool noWildcard();
     inline int wildcardNum();
@@ -91,7 +97,7 @@ public:
     inline void addProb(const Motif& m,int prevSize);
     void concatenate(const Motif& m,int index ,int optimShift);
     std::pair<int,int> editDistance(const Motif& m);
-    float histoneDistrDistance(const Motif& m);
+    float tagDistrDistance(const Motif& m);
     void calPWM(const Motif& m,int optimShift);
     inline void appendLoci(const Motif& m);
     void mergeLoci();
@@ -101,7 +107,6 @@ public:
     vector<int> totalPWM;
     int sumPWM();
 };
-
 
 
 
@@ -127,9 +132,9 @@ inline bool Motif::isRepeat(){
     for (int i=1; i<K; i++) {
         if (query[i]!=query[0]) {
             counter++;
-        }
-        if (counter>=1&&query[i]!=query[1]) {
-            return false;
+            if (i>=2&&query[i]!=query[1]&&query[1]!=query[0]) {
+                return false;
+            }
         }
     }
     //TTTTTT TTATTT
@@ -174,29 +179,23 @@ inline int Motif::wildcardNum(){
  
 
 //m1>m2?
+/*
+class compareMotifHeap {
+public:
+    bool operator()(Motif lhs, Motif rhs){
+        return lhs.overallScorerhs.overallScore;
+    }
+};
+*/
+
 class compareMotif {
 public:
-    bool operator()(Motif m1, Motif m2){
-        return m1.score>m2.score;
-        //return m1.overallScore>m2.overallScore;
+    bool operator()(Motif lhs, Motif rhs){
+        return lhs.overallScore>rhs.overallScore;
     }
 };
 
-class compareCluster {
-public:
-    bool operator()(Motif m1, Motif m2){
-        return m1.overallScore>m2.overallScore;
-    }
-};
-/*
-inline bool compareMotif(Motif m1, Motif m2)
-{   
-    if (m1.signif!=m2.signif) {
-        return m1.signif>m2.signif>0?true:false;
-    }
-	return (m1.score>m2.score);
-}
-*/
+
 
 inline string Motif::translate(int query){
     string tempS("");
@@ -226,14 +225,19 @@ inline string Motif::translate(int query){
 }
 
 void inline Motif::printMotif(){
-    cout<<query<<"\t"<<score<<"\t";
-    for (int i=0; i<signif.size(); i++) {
-        cout<<signif[i]<<"\t";
+    cout<<query<<"\t"<<pvalue()<<"\t"<<score<<"\t";
+    for (int i=0; i<tagSTD.size(); i++) {
+        cout<<tagSTD[i]<<"\t";
+    }
+    if (option["FFT"]=="T") {
+        for (int i=0; i<tagNoise.size(); i++) {
+            cout<<tagNoise[i]<<"\t";
+        }
     }
     cout<<loci.size()<<endl;
 }
 //print pwm to stream
-ostream &operator<<( ostream &s, const Motif &motif );
+ostream &operator<<( ostream &s, Motif &motif );
 //clustering
 inline void Cluster::appendLoci(const Motif& m){
     loci.insert(loci.end(),m.loci.begin(),m.loci.end());
