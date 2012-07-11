@@ -14,7 +14,7 @@
 //
 
 #include "bwt.h"
-extern int GenomeSize;
+extern int RegionSize;
 
 //
 // This is the hash table where all the currently
@@ -492,7 +492,7 @@ vector<int> Suffix::locateMotif(Motif& currentMotif){
                 else {
                     // return edgeString.size()==queryTemp?Nodes[tempEdge.end_node].leaf_count_beneath:Nodes[currentNode].leaf_count_beneath;
                     if (Nodes[tempEdge.end_node].leaf_index!=-1){
-                        loci.push_back(GenomeSize - (current_query_index+tempEdge.last_char_index-tempEdge.first_char_index+1));
+                        loci.push_back(RegionSize - (current_query_index+tempEdge.last_char_index-tempEdge.first_char_index+1));
                         break;
                     }
                     //traverse beneath nodes
@@ -524,7 +524,7 @@ void Suffix::traverseLoci(int offset, int nodeIndex){
         Edge edge = Edge::Find(nodeIndex, token[i]);
         if (edge.start_node != -1){
             if (Nodes[edge.end_node].leaf_index!=-1){
-                loci.push_back(GenomeSize - (offset+edge.last_char_index-edge.first_char_index+1));
+                loci.push_back(RegionSize - (offset+edge.last_char_index-edge.first_char_index+1));
                 continue;
             }
             else {

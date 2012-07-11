@@ -14,6 +14,9 @@ using namespace std;
 
 int K;
 float DELTA;
+int MAXSHIFT;
+int MAXDISTANCE;
+float MAXKLDIV;
 map<string,string> option;
 
 
@@ -27,7 +30,6 @@ void parseCommandLine(int argc,
                       ) {
     
     // Set default values for command line arguments
-    cerr<<"Commandline:";
     
     map<string, bool> optionRequire;
     //t:tag n:normal
@@ -64,7 +66,7 @@ void parseCommandLine(int argc,
     option          ["FFT"]      =  "T";
     optionRequire   ["FFT"]      =   false;
     //
-    option          ["trim"]      =  "50";
+    option          ["trim"]      =  "30";
     optionRequire   ["trim"]      =   false;
     //
     option          ["clusterlength"]      =  "20";
@@ -75,135 +77,184 @@ void parseCommandLine(int argc,
     //p-value for over-representation
     option          ["pvalue"]      =  "0.05";
     optionRequire   ["pvalue"]      =   false;
+    //if remove repeat
+    option          ["rmrepeat"]      =  "T";
+    optionRequire   ["rmrepeat"]      =   false;
+    //if remove repeat
+    option          ["clusterStringency"]      =  "0";
+    optionRequire   ["clusterStringency"]      =   false;
     // Parse the command line.
     string option_name = "";
     string option_value = "";
     
     
     // Read the next option, and break if we're done.
-    for (int i=1; i<argc-1; i+=2) {
-        option_name = argv[i];
-        transform(option_name.begin(), option_name.end(), option_name.begin(), ::tolower);
-        option_value = argv[i+1];
-        // Assign the parsed value to the appropriate variable
-        // and validate each parameter input
-        if (option_name == "-m") {
-            option["mode"] = option_value;
-            optionRequire["mode"] = false;
-            if (option_value=="tag") {
-                optionRequire["tagfile"] = true;
-            }
-            else if (option_value=="normal") {
-                
-            }
-            else if (option_value=="help") {
-                printUsage();
-                exit(0);
-            }
-            else {
-                cerr<<"wrong mode!"<<endl;
-                printUsage();
-                exit(1);
-            }
-        } 
-        else if (option_name == "-f") {
-            option["fastafile"] = option_value;
-            optionRequire["fastafile"] = false;
-        } 
-        else if (option_name == "-r") {
-            option["regionfile"] = option_value;
-            optionRequire["regionfile"] = false;
-        } 
-        else if (option_name == "-t") {
-            option["tagfile"] = option_value;
-            optionRequire["tagfile"] = false;
-        } 
-        else if (option_name == "-o") {
-            option["outdir"] = option_value;
-        } 
-        else if (option_name == "-k") {
-            option["k"] = option_value;
-            if (atoi(option["k"].c_str())<4||
-                atoi(option["k"].c_str())>15) {
-                printAndExit("K must be within [4,15]");
-            }
-           
-        } 
-        else if (option_name == "-bo") {
-            option["order"] = option_value;
-            if (atoi(option["order"].c_str())<-1||
-                atoi(option["order"].c_str())>1) {
-                printAndExit("order must be within [-1,1]");
-            }
+    if (argc==0) {
+        printUsage();
+        exit(0);
+    }
+    for (int i=1; i<argc+1; i++) {
+        if (i==argc) {
+            goto CHECKPARA;
         }
-        else if (option_name == "-locifile") {
-            option["writeloci"] = option_name;
-            if (option["writeloci"]!="T"&&option["writeloci"]!="F") {
-                printAndExit("writeloci value should be either T or F");
-            }
-        }
-        else if (option_name == "-regionfile") {
-            option["writeregion"] = option_name;
-            if (option["writeregion"]!="T"&&option["writeregion"]!="F") {
-                printAndExit("writeregion value should be either T or F");
-            }
-        }
-        else if (option_name == "-br") {
-            option["bkgregion"] = option_name;
-        }
-        else if (option_name == "-fft") {
-            option["FFT"] = option_name;
-            if (option["FFT"]=="T"&&option_value!="tag") {
-                printAndExit("Mode must be tag if FFT is chosen");
-            }
-            if (option["FFT"]!="T"&&option["FFT"]!="F") {
-                printAndExit("FFT value should be either T or F");
-            }
-        }
-        else if (option_name == "-trim") {
-            option["trim"] = option_name;
-            if (atoi(option["trim"].c_str())<10||
-                atoi(option["trim"].c_str())>100) {
-                printAndExit("trim must be within [10,100]");
-            }
-        }
-        else if (option_name == "-clusterlength") {
-            option["clusterlength"] = option_name;
-        }
-        else if (option_name == "-clusterlength") {
-            option["clusterlength"] = option_name;
-            if (atoi(option["clusterlength"].c_str())<4||
-                atoi(option["clusterlength"].c_str())>30) {
-                printAndExit("clusterlength must be within [4,30]");
-            }
-        }
-        else if (option_name == "-pvalue"||option_name == "-p") {
-            option["pvalue"] = option_name;
-            if (atof(option["pvalue"].c_str())>=1||
-                atof(option["pvalue"].c_str())<0) {
-                printAndExit("pvalue should be within (0,1), <0.05 recommend");
-            }
+        else if (argv[i][0]!='-') {
+            option_value+=argv[i];
+            option_value+=" ";
         }
         else {
-            cerr<<"unrecognized option "<<option_name<<"! skip"<<endl;
-            continue;
-        } 
+        CHECKPARA:
+            // Assign the parsed value to the appropriate variable
+            // and validate each parameter input
+            trim(option_value);
+            if (option_name=="") {
+                //do nothing
+            }
+            else if (option_name == "-h"||option_name == "--help") {
+                printUsage();
+                exit(0);
+            } 
+            else if (option_name == "-m") {
+                option["mode"] = option_value;
+                optionRequire["mode"] = false;
+                if (option_value=="tag") {
+                    optionRequire["tagfile"] = true;
+                }
+                else if (option_value=="normal") {
+                    
+                }
+                else if (option_value=="help") {
+                    printUsage();
+                    exit(0);
+                }
+                else {
+                    cerr<<"FATAL:"<<"wrong mode!"<<endl;
+                    exit(1);
+                }
+            } 
+            else if (option_name == "-f") {
+                option["fastafile"] = option_value;
+                optionRequire["fastafile"] = false;
+            } 
+            else if (option_name == "-r") {
+                option["regionfile"] = option_value;
+                optionRequire["regionfile"] = false;
+            } 
+            else if (option_name == "-t") {
+                option["tagfile"] = option_value;
+                optionRequire["tagfile"] = false;
+            } 
+            else if (option_name == "-o") {
+                option["outdir"] = option_value;
+            } 
+            else if (option_name == "-k") {
+                option["k"] = option_value;
+                if (atoi(option["k"].c_str())<4||
+                    atoi(option["k"].c_str())>15) {
+                    printAndExit("K must be within [4,15]");
+                }
+                
+            } 
+            else if (option_name == "-bo") {
+                option["order"] = option_value;
+                if (atoi(option["order"].c_str())<-1||
+                    atoi(option["order"].c_str())>1) {
+                    printAndExit("order must be within [-1,1]");
+                }
+            }
+            else if (option_name == "-locifile") {
+                option["writeloci"] = option_value;
+                if (option["writeloci"]!="T"&&option["writeloci"]!="F") {
+                    printAndExit("writeloci value should be either T or F");
+                }
+            }
+            else if (option_name == "-regionfile") {
+                option["writeregion"] = option_value;
+                if (option["writeregion"]!="T"&&option["writeregion"]!="F") {
+                    printAndExit("writeregion value should be either T or F");
+                }
+            }
+            else if (option_name == "-br") {
+                option["bkgregion"] = option_value;
+            }
+            else if (option_name == "-fft") {
+                option["FFT"] = option_value;
+                if (option["FFT"]=="T"&&option_value!="tag") {
+                    printAndExit("Mode must be tag if FFT is chosen");
+                }
+                if (option["FFT"]!="T"&&option["FFT"]!="F") {
+                    printAndExit("FFT value should be either T or F");
+                }
+            }
+            else if (option_name == "-trim") {
+                option["trim"] = option_value;
+                if (atoi(option["trim"].c_str())<10||
+                    atoi(option["trim"].c_str())>100) {
+                    printAndExit("trim must be within [10,100]");
+                }
+            }
+            else if (option_name == "-cl") {
+                option["clusterlength"] = option_value;
+                if (atoi(option["clusterlength"].c_str())<4||
+                    atoi(option["clusterlength"].c_str())>30) {
+                    printAndExit("clusterlength must be within [4,30]");
+                }
+            }
+            else if (option_name == "-pvalue"||option_name == "-p") {
+                option["pvalue"] = option_value;
+                if (atof(option["pvalue"].c_str())>=1||
+                    atof(option["pvalue"].c_str())<0) {
+                    printAndExit("pvalue should be within (0,1), <0.05 recommend");
+                }
+            }
+            else if (option_name == "-rmrepeat") {
+                option["rmrepeat"] = option_value;
+                if (option["rmrepeat"]!="T"&&option["rmrepeat"]!="F") {
+                    printAndExit("rmrepeat value should be either T or F");
+                }
+            }
+            else if (option_name == "-cs") {
+                option["clusterStringency"] = option_value;
+                if (atof(option["clusterStringency"].c_str())>=1||
+                    atof(option["clusterStringency"].c_str())<0) {
+                    printAndExit("clusterStringency should be within [0,1), <0.05 recommend");
+                }
+            }
+            else {
+                cerr<<"unrecognized option "<<option_name<<"! skip"<<endl;
+                continue;
+            } 
+            
+            //update
+            if (i==argc) {
+                break;
+            }
+            option_value = "";
+            option_name = argv[i];
+            transform(option_name.begin(), option_name.end(), option_name.begin(), ::tolower);
+        }
+        
+        
+        
     }
     //output commandlines:
+    cerr<<"\nCommandline:";
     for (map<string, string>::iterator it=option.begin();it!=option.end();it++) {
         cerr<<"(-"<<it->first<<" "<<it->second<<") ";
     }
-    
+    cerr<<"\n";
     // verify required arguments .
     for (map<string, bool>::iterator it=optionRequire.begin();it!=optionRequire.end();it++) {
         if (it->second) {
-            cerr<<"option "<<it->first<<" need to be specified in command line"<<endl;
-            printUsage();
+            cerr<<"FATAL:"<<"option "<<it->first<<" need to be specified in command line!"<<endl;
             exit(1);
         }
     }
     //changing parameters
     K = atoi(option["k"].c_str());
+    float stringency = atof(option["clusterStringency"].c_str());
+    MAXSHIFT = int(K*(1-stringency)/3);
+    MAXDISTANCE = int(4*K*(1-stringency)/3);
+    MAXKLDIV = float(0.01+0.07*(1-stringency));
     DELTA = NormalCDFInverse(1.0-atof(option["pvalue"].c_str()))+1.0;
     cerr<<endl;
     
@@ -211,31 +262,31 @@ void parseCommandLine(int argc,
 
 void printUsage()
 {
-	string usage =	"*------------------------------------------*\n";
-	usage		+=	"        Mosh " + MOSHVERSION+"\n";
-	usage		+=	"        Developed by Yizhe Zhang, Chaochun Wei\n";
-	usage		+=	"        jeremy071242044@gmail.com\n";
-	usage		+=	"*------------------------------------------*\n\n";
+	string usage =	"***********************************************************************************************\n";
+	usage		+=	"                             Mosh " + MOSHVERSION+"\n";
+	usage		+=	"                             Developed by Yizhe Zhang, Chaochun Wei\n";
+	usage		+=	"                             jeremy071242044@gmail.com\n";
+	usage		+=	"***********************************************************************************************\n\n";
 	usage		+=	"    mosh [option: <parameter1> <parameter2>]  \n\n";
 	usage		+=	"    Required Parameters:\n\n";
-	usage		+=	"    -m <normal/tag>\tRuning mode:tagfile should be specified if tag mode is selected\n\n";
-	usage		+=	"    -f <DNA sequence file>\tWhole genome DNA sequences\n\n";
-    usage		+=	"    -b <BED file>\tregions of interest\n\n";
-    usage		+=	"    -t <WIG file>\tTag file for Histone marks or other sources\n\n";
-    usage		+=	"    CAVEAT:WIG FILE SHOULD BE SORTED\n\n";
-	usage		+=	"    -h help\tPrint help information.\n\n";
+	usage		+=	"    -m <normal/tag/help>       Runing mode:tagfile should be specified if tag mode is selected\n\n";
+	usage		+=	"    -f <DNA sequence file>     Whole genome DNA sequences\n\n";
+    usage		+=	"    -b <BED file>              Regions of interest\n\n";
+    usage		+=	"    -t <WIG file>              Tag file for Histone marks or other sources\n\n";
+    //usage		+=	"    CAVEAT:WIG FILE SHOULD BE SORTED\n\n";
+	usage		+=	"    -h help                    Print help information.\n\n";
     usage		+=	"    Optional Parameters:\n\n";
-    usage		+=	"    -o <outputDIR>\tSpecify an output directory.\n\n";
-    usage		+=	"    -bo <0,1> \tOrder for background sequence\n\n";
-    usage		+=	"    -br <region/genome>\tspecify background sequence\n\n";
-    usage		+=	"    -locifile <T/F>\tWhether or not loci file of each cluster should be exported\n\n";
-    usage		+=	"    -regionfile <T/F>\tWhether or not loci file of each cluster should be exported\n\n";
-    usage		+=	"    -fft <T/F>\tWhether or not to cast FFT on each bins(default T)\n\n";
-    usage		+=	"    -trim <10-100 integer>\tlarger trimer means larger length of cluster\n\n";
-    usage		+=	"    -clusterlength <4-30 integer>\tmaximal length of single cluster\n\n";
-    usage		+=	"    -p(-pvalue) <0-1 float>\tp-value for low occurence word filtering\n\n";
-    
-    
+    usage		+=	"    -o <outputDIR>             Specify an output directory.\n\n";
+    usage		+=	"    -bo <0,1>                  Order for background sequence\n\n";
+    usage		+=	"    -br <region/genome>        Specify background sequence\n\n";
+    usage		+=	"    -locifile <T/F>            Whether or not loci file of each cluster should be exported\n\n";
+    usage		+=	"    -regionfile <T/F>          Whether or not loci file of each cluster should be exported\n\n";
+    usage		+=	"    -fft <T/F>                 Whether or not to cast FFT on each bins(default T)\n\n";
+    usage		+=	"    -trim <10-100 integer>     Larger trimer means larger length of cluster\n\n";
+    usage		+=	"    -cl <4-30 integer>         maximal length of single cluster\n\n";
+    usage		+=	"    -p(-pvalue) <0-1 float>    P-value for low occurence word filtering\n\n";
+    usage		+=	"    -rmrepeat <T/F>            Whether or not to remove repeat words(default T)\n\n";
+    usage		+=	"    -cs <0-1 float>            Stringency of clustering(default 0.05)\n\n";
 	cerr<<usage<<endl;
 }
 
@@ -286,47 +337,74 @@ bool genomeRegions::readWig(const string &filename){
     int wigStep=25;
     string currentChr("");
     string thistag("");
-        
+    //mode 1 (chr1 800 1.25)density    mode 2 (800 1.25)wig   mode 3 (1.25 fixed)fixwig
+    int mode = 0;  
+    int fixedPos = 1;
+    string WigChr;
+    int lineCounter=0;
+    map<int, string> modelabel;
+    modelabel[1]="density";
+    modelabel[2]="variableStep wig";
+    modelabel[3]="fixedStep wig";
     while (getline(wigFile, line)) {
+        lineCounter++;
         //new histone/tag
-        if (line[0]=='v') {
-            //find info
-            size_t found = line.find("histone=");
-            if (found!=string::npos){
-                size_t found2 = line.find("span=");
-                if (found2 == line.npos) {
-                    cerr<<"FATAL: Wigfile's info line contains no \"span=\""<<endl;
-                    exit(1);
-                }
-                tagName.push_back(line.substr(found+8,found2-found-9));
-                cerr<<"find Tag "<<tagName.back()<<endl;
-            }
-            else {
-                char temptagName[20];
-                sprintf (temptagName, "TagNo.%lu", tagName.size()+1);
-                tagName.push_back(temptagName);
-                cerr<<"find Tag "<<tagName.back()<<" You'd better contain histone=**"<<endl;
-            }
-            
-            
-            //check else and put last histone's last chr 
-            if (thistag!="") {
+        if (line[0]=='v'||line[0]=='f') {
+            size_t found;
+            //if mode is 1 check else and put last histone's last chr 
+            if (currentChr!="") {
                 getTagBed(thistag,currentChr);
-                //check histone contains all chrome info that is needed
-                for (vector<string>::iterator fastaIt=chromeNames.begin(); fastaIt!=chromeNames.end(); fastaIt++) {
-                    
-                    if (rawTag[thistag].find(*fastaIt)==rawTag[thistag].end()) {
-                        cerr<<"WARNING:"<<thistag<<" in TagFile doesn't contain chrome "<<(*fastaIt)<<" appears in fastaFile"<<endl;
-                        rawTag[thistag][*fastaIt].assign(genomeLength[*fastaIt], 0);
-                        getTagBed(thistag,*fastaIt);
-                    }
-                }
-                
             }
-
             
+            //find info 
+            if (lineCounter==1) {
+                found = line.find("histone=");
+                if (found!=string::npos){
+                    size_t found2 = line.find("span=");
+                    if (found2 == line.npos) {
+                        cerr<<"FATAL: Wigfile's info line contains no \"span=\""<<endl;
+                        exit(1);
+                    }
+                    tagName.push_back(line.substr(found+8,found2-found-9));
+                    
+                }
+                else {
+                    char temptagName[20];
+                    sprintf (temptagName, "TagNo.%lu", tagName.size()+1);
+                    tagName.push_back(temptagName);
+                    cerr<<" You'd better contain histone=**"<<endl;
+                }
+            }
             thistag = tagName.back();
             
+            //find chr info,determine mode
+            found = line.find("chrom="); 
+            if (found==string::npos||line.substr(found+6,6)=="chrAll") {
+                mode = 1;
+            }
+            else {
+                string tempS=line.substr(found+6,5);
+                WigChr = trim(tempS);
+                rawTag[thistag][WigChr].assign(genomeLength[WigChr], 0); 
+                if (line[0]=='f') {
+                    mode = 3;
+                    size_t found1 = line.find("start="); 
+                    if (found1==string::npos) {
+                        printAndExit("check wig file,fixedStep should have \"start=\"");
+                    }
+                    else {
+                        string tempS=line.substr(found1+6,2);
+                        fixedPos = atoi(trim(tempS).c_str());
+                    }
+                }
+                else {
+                    mode = 2;
+                }
+            }
+            if (lineCounter==1) {
+                cerr<<"Find Tag "<<tagName.back()<<" mode "<<modelabel[mode]<<endl;
+            }
+            //span=
             found = line.find("span=");
             if (found!=string::npos){
                 wigStep=atoi(line.substr(found+5,line.size()-found-5).c_str());
@@ -335,61 +413,76 @@ bool genomeRegions::readWig(const string &filename){
                 cerr<<"check wig file's info line: should contain span=**"<<endl;
                 exit(0);
             }
-            currentChr = "";
+            if (mode==1) {
+                currentChr = "";
+            }
             continue;
         }
 		if(line.size() == 0) continue;
 		/* Read wig line */
 		istringstream ss(line);
-		
-        
-		string temp;
-		ss>>segment.chr;
-        if (!existChr(segment.chr)) continue;
-        ss>>temp;
-		segment.startP = atoi(temp.c_str());
-        if (segment.startP<0) continue;
-		segment.endP = segment.startP + wigStep;
-        ss>>temp;
-        int score = atof(temp.c_str())*4;
-        //find new chr  push old and detect lack
-        if (segment.chr!=currentChr) {
-            //push old
-            if (currentChr!="") {
-                //put last one
-                getTagBed(thistag,currentChr);
-                //check histone contains all chrome info that is needed
-                vector<string>::iterator from,to;
-                from  = find (chromeNames.begin(), chromeNames.end(), currentChr)+1;
-                to  = find (chromeNames.begin(), chromeNames.end(), segment.chr);
-                if (from!=to) {
-                    for (vector<string>::iterator fastaIt=from; fastaIt!=to; fastaIt++) {
-                        if (rawTag[thistag].find(*fastaIt)==rawTag[thistag].end()) {
-                            cerr<<"WARNING:"<<thistag<<" in TagFile doesn't contain chrome "<<(*fastaIt)<<" appears in fastaFile"<<endl;
-                            rawTag[thistag][*fastaIt].assign(genomeLength[*fastaIt], 0);
-                            getTagBed(thistag,*fastaIt);
-                        }
-                    }
-                }
-            }
-            
-            
-            
-            currentChr = segment.chr;
-            //or find  != .end()
-            if (rawTag[thistag].count(currentChr)) {
-                string errorInfo = "Error! chrome "+currentChr+" information collides in Tag file\n";
-				cout<<errorInfo;
-                continue;
-            }
-            //cout<<line<<currentChr<<endl;
-            
-            
-            
-
-            rawTag[thistag][currentChr].assign(genomeLength[currentChr], 0);  
-            //cout<<currentChr<<genomeLength[currentChr]<<endl;
+        int score;
+		if (mode == 1) {
+            string temp;
+            ss>>segment.chr;
+            if (!existChr(segment.chr)) continue;
+            ss>>temp;
+            segment.startP = atoi(temp.c_str());
+            if (segment.startP<0) continue;
+            segment.endP = segment.startP + wigStep;
+            ss>>temp;
+            score = int(atof(temp.c_str())*4);
         }
+        else if (mode == 2) {
+            string temp;
+            currentChr=WigChr;
+            ss>>temp;
+            segment.startP = atoi(temp.c_str());
+            if (segment.startP<0) continue;
+            segment.endP = segment.startP + wigStep;
+            ss>>temp;
+            score = atoi(temp.c_str());
+        }
+        //mode = 3
+        else {
+            string temp;
+            currentChr=WigChr;
+            fixedPos += wigStep;
+            segment.startP = fixedPos;
+            segment.endP = segment.startP + wigStep;
+            ss>>temp;
+            score = atoi(temp.c_str());
+        }
+		
+        //find new chr  push old and detect lack
+        if (mode==1) {
+            if (segment.chr!=currentChr) {
+                //push old
+                if (currentChr!="") {
+                    //put last one
+                    getTagBed(thistag,currentChr);
+                    
+                }
+                
+                
+                
+                currentChr = segment.chr;
+                //or find  != .end()
+                if (rawTag[thistag].count(currentChr)) {
+                    string errorInfo = "Error! chrome "+currentChr+" information collides in Tag file\n";
+                    cout<<errorInfo;
+                    continue;
+                }
+                //cout<<line<<currentChr<<endl;
+                
+                
+                
+                
+                rawTag[thistag][currentChr].assign(genomeLength[currentChr], 0);  
+                //cout<<currentChr<<genomeLength[currentChr]<<endl;
+            }
+        }
+        
         if (score<=0) {
             continue;
         }
@@ -399,7 +492,6 @@ bool genomeRegions::readWig(const string &filename){
         //for performance
         vector<short int> &tempMap=rawTag[thistag][currentChr];
         for (int j=segment.startP-1; j<segment.endP; j++) {
-            
             tempMap[j]+=score;
         //            cout<<j;
         }
@@ -407,6 +499,30 @@ bool genomeRegions::readWig(const string &filename){
     }
     //last tag's last chrome
     getTagBed(thistag,currentChr);
+    
+    //check histone contains all chrome info that is needed
+    for (vector<string>::iterator ChrIt=chromeNames.begin(); ChrIt!=chromeNames.end(); ChrIt++) {
+        if (rawTagSegments[thistag].find(*ChrIt)==rawTagSegments[thistag].end()) {
+            cerr<<"WARNING:"<<thistag<<" in TagFile doesn't contain chrome "<<(*ChrIt)<<" appears in fastaFile"<<endl;
+            rawTag[thistag][*ChrIt].assign(genomeLength[*ChrIt], 0);
+            getTagBed(thistag,*ChrIt);
+        }
+    }
+    return true;
+    
+}
+bool genomeRegions::catenateTags(){
+    
+    //catenate tag
+    assert(regionTags.size()==0);
+    for (int i=0; i<tagName.size(); i++) {
+        for (vector<string>::iterator ChrIt=chromeNames.begin(); ChrIt!=chromeNames.end(); ChrIt++) {
+            //cerr<<regionTags[tagName[i]].size()<<" "<<rawTagSegments[tagName[i]][*ChrIt].size()<<endl;
+            regionTags[tagName[i]].insert(regionTags[tagName[i]].end(),rawTagSegments[tagName[i]][*ChrIt].begin(), rawTagSegments[tagName[i]][*ChrIt].end());
+            vector<short int> temp;
+            rawTagSegments[tagName[i]][*ChrIt].swap(temp);
+        }
+    }   
     //append reverse for antisense,for each tag
     appendReverseTag();
     return true;
@@ -610,8 +726,6 @@ void genomeRegions::mergeOverlap(){
                 }
                 startCut=it->startP;
                 endCut=it->endP;
-                //clear memory
-                rawTag[currentChr].clear();
                 currentChr=it->chr;
             }
             else {
@@ -635,15 +749,14 @@ void genomeRegions::mergeOverlap(){
         tempG.endP = endCut;
         tempG.chr = currentChr;
         mergedGenome.push_back(tempG);
-        //clear memory
-        rawTag[currentChr].clear();
     } catch (exception &e) {
         cerr<<e.what()<<endl;
-        cerr<<"chrome:"<<currentChr<<" start:"<<startCut<<" end:"<<endCut<<" genomesize"<<rawTag[currentChr].size()<<endl;
+        cerr<<"chrome:"<<currentChr<<" start:"<<startCut<<" end:"<<endCut<<endl;
     }
     genomes.swap(mergedGenome);
 }
 
+//for one chromesome
 void genomeRegions::getTagBed(const string& thistag,const string& currentChr){   
     vector<genomeRegion>::iterator it;
     bool rear = false;
@@ -668,6 +781,30 @@ void genomeRegions::getTagBed(const string& thistag,const string& currentChr){
 
 void genomeRegions::appendTag(int a,int b,const string& chr,const string& thistag){   
     try {
+        a -= EXTENDBOUND+1;
+        b += EXTENDBOUND;
+        int end=b;
+        //assign this segment with 0
+        if (a>=genomeLength[chr]) {
+            end=a;
+        }
+        if (b>genomeLength[chr]-1) {
+            end=genomeLength[chr]-1;
+        }
+        // cerr<<rawTagSegments[thistag][chr]<<" "<<a<<" "<<b<<endl;
+        rawTagSegments[thistag][chr].insert(rawTagSegments[thistag][chr].end(),rawTag[thistag][chr].begin()+a, rawTag[thistag][chr].begin()+end);
+        // cerr<<rawTagSegments[thistag][chr].size()<<endl;
+        if (end!=b) {
+            vector<int> temp;
+            if (b-EXTENDBOUND>genomeLength[chr]-1) {
+                temp.assign(EXTENDBOUND, 0);
+            }
+            else {
+                temp.assign(b-end,0);
+            }
+            rawTagSegments[thistag][chr].insert(rawTagSegments[thistag][chr].end(),temp.begin(),temp.end());
+        }
+        /*
         for (int i=a-1-EXTENDBOUND; i<b+EXTENDBOUND; i++) {
             //if b exceed fasta's length
             if (i>=genomeLength[chr]-1) {
@@ -694,7 +831,8 @@ void genomeRegions::appendTag(int a,int b,const string& chr,const string& thista
             }
 
         }
-        regionTags[thistag].push_back(0);
+        */
+        rawTagSegments[thistag][chr].push_back(0);
     } catch (exception &e) {
         cerr<<e.what()<<endl;
         cerr<<"Tag insert error: chrome:"<<chr<<" start:"<<a<<" end:"<<b<<" chromesize"<<rawTag[thistag][chr].size()<<endl;
@@ -1023,6 +1161,18 @@ pair<int,int> locateSubscript(const vector<int> &listObj, vector<int>::const_ite
 		return locateSubscript(listObj, begin, end-span/2, queryVal);
 	}  
 }
+
+
+
+float symKLDiv(const vector<float> &lhs, const vector<float> &rhs){
+    assert(lhs.size()==rhs.size());
+    float temp = 0;
+    for (int t=0; t<lhs.size(); t++) {
+        temp += lhs[t]*log10f((lhs[t]+SMALLNUM)/(rhs[t]+SMALLNUM))+rhs[t]*log10f((rhs[t]+SMALLNUM)/(lhs[t]+SMALLNUM));
+    }
+    return temp;
+}
+
 //statistic snipplet implement from http://www.johndcook.com/cpp_phi.html by John D. Cook, revised a little bit 
 float calPhi(float x)
 {
@@ -1110,3 +1260,5 @@ float NormalCDFInverse(float p)
     }
     
 }
+
+

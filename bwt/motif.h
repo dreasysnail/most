@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <vector>
 #include <math.h>
+#include <iomanip>
 //#include <stdio.h>
 //#include <stdlib.h>
 #include "common.h"
@@ -29,7 +30,8 @@ class Motif{
     vector<int> pwm[4];
     //bool overThresh;
     vector<int> loci;
-    vector<float> tagSTD;
+    vector<float> tagBiPeak;
+    vector<float> tagSymmetry;
     float motifProb;
     //each vector is a bin   sumBin[bin][tag]
     vector<float> sumBin[2*SAMPLESIZE+1];
@@ -88,21 +90,25 @@ class Motif{
     //print info
     void inline printMotif();  
     inline static string translate(int i);
+    //cluster method
+    
     
 };
 
 class Cluster: public Motif{
 public:
-    Cluster(const Motif &m):Motif(m){};
+    Cluster(const Motif &m):Motif(m){index=-1;};
     inline void addProb(const Motif& m,int prevSize);
     void concatenate(const Motif& m,int index ,int optimShift);
     std::pair<int,int> editDistance(const Motif& m);
     float tagDistrDistance(const Motif& m);
     void calPWM(const Motif& m,int optimShift);
     inline void appendLoci(const Motif& m);
+    void reCalSumBin(const Motif& m,const genomeRegions &gR);
     void mergeLoci();
     void trim();
-    bool unif(int pos);
+    bool trivial(int pos);
+    void writeCLusterLog(ostream &s,const Motif& m);
     //sumpwm for trim
     vector<int> totalPWM;
     int sumPWM();
@@ -225,9 +231,13 @@ inline string Motif::translate(int query){
 }
 
 void inline Motif::printMotif(){
-    cout<<query<<"\t"<<pvalue()<<"\t"<<score<<"\t";
-    for (int i=0; i<tagSTD.size(); i++) {
-        cout<<tagSTD[i]<<"\t";
+    cout.precision(4);
+    cout<<std::setw(25)<<setiosflags(std::ios::left)<<query<<"\t"<<pvalue()<<"\t"<<score<<"\t";
+    for (int i=0; i<tagBiPeak.size(); i++) {
+        cout<<tagBiPeak[i]<<"\t";
+    }
+    for (int i=0; i<tagSymmetry.size(); i++) {
+        cout<<tagSymmetry[i]<<"\t";
     }
     if (option["FFT"]=="T") {
         for (int i=0; i<tagNoise.size(); i++) {

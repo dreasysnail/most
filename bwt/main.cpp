@@ -1,3 +1,4 @@
+
 //
 //  main.cpp
 //  bwt
@@ -25,7 +26,7 @@ using namespace std;
 extern char T[ MAX_LENGTH ];
 extern int N;
 
-extern int GenomeSize;
+extern int RegionSize;
 extern Edge* Edges;
 extern Node* Nodes;
 extern map<string,string> option;
@@ -38,6 +39,7 @@ int main(int argc, char **argv)
     clock_t tStart,t1,t2,t2_1,t3,t4,tEnd;
     tStart=clock();
     cerr<<"START MOTIF FINDING"<<endl;
+    parseCommandLine(argc, argv);
     Edges = new Edge[ HASH_TABLE_SIZE ];
     Nodes = new Node[ MAX_LENGTH * 2 ];
     genomeRegions *gR = new genomeRegions(0);
@@ -45,7 +47,7 @@ int main(int argc, char **argv)
     //for test
     //test();
 
-    parseCommandLine(argc, argv);
+
     
     Suffix active( 0, 0, -1 );  // The initial active prefix
     
@@ -74,43 +76,36 @@ int main(int argc, char **argv)
         
         //initiate T 
         cerr<<"regionFile（bedFormat）:"<<option["regionfile"]<<endl;
-        GenomeSize = gR->appendReverseGenome(T);
+        RegionSize = gR->appendReverseGenome(T);
         t1=clock();
         cerr<<"Parsing Fasta:"<<double((t1-tStart)/1e6)<<endl;
         // tag mode
         if (option["mode"]=="tag") {
 
-            
-            string tagFileName(option["tagfile"]);
-            //if tag file is wigfile
-            if (tagFileName.substr(tagFileName.size()-3,3)=="wig") {
-                cerr<<"tagfile（WigFormat）:"<<tagFileName<<endl;
-                gR->readWig(tagFileName);
+            string fileName("");
+            string tagFileNames(option["tagfile"]);
+            istringstream ss(tagFileNames);
+            while (ss>>fileName) {
+                cerr<<"tagfile:"<<fileName<<endl;
+                gR->readWig(fileName);
             }
-            else {
-                //problematic
-                //genomeRegions tag(0);
-                //cerr<<"tagfile（BedFormat）:"<<tagFileName<<endl;
-                //tag.readBed(tagFileName);
-                //gR->writeRawTag(tag);
-            }
-            //gR->getTagBed();
+            gR->catenateTags();
             t2_1=clock();
             cerr<<"Parsing Wig:"<<double((t2_1-t1)/1e6)<<endl;
             t1=t2_1;
             
             //cout<<gR->regionTags<<endl;
             for (int i=0; i<gR->tagName.size(); i++) {
-                cerr<<gR->tagName[i]<<"size:"<<gR->regionTags[gR->tagName[i]].size()<<"\t";
+                cerr<<gR->tagName[i]<<" size:"<<gR->regionTags[gR->tagName[i]].size()<<"\t";
                 //cerr<<gR->regionTags[gR->tagName[i]]<<endl;
                 cerr<<long(gR->regionTags[gR->tagName[i]].size())-EXTENDBOUND*4*gR->segmentCount<<endl;
-                assert(GenomeSize==long(gR->regionTags[gR->tagName[i]].size())-EXTENDBOUND*4*gR->segmentCount);
+                assert(RegionSize==long(gR->regionTags[gR->tagName[i]].size())-EXTENDBOUND*4*gR->segmentCount);
             }
         }
-        cerr<<"genomesize:"<<GenomeSize<<endl;
-        assert(GenomeSize<=MAX_LENGTH);
-        assert(GenomeSize*2<=HASH_TABLE_SIZE);
-        assert(gR->segmentStartPos.back()==GenomeSize);
+        cerr<<"RegionSize:"<<RegionSize<<endl;
+        assert(RegionSize<=MAX_LENGTH);
+        assert(RegionSize*2<=HASH_TABLE_SIZE);
+        assert(gR->segmentStartPos.back()==RegionSize);
         N = strlen(T) - 1;
         
         for ( int i = 0 ; i <= N ; i++ )
@@ -128,6 +123,7 @@ int main(int argc, char **argv)
         const int K_4=pow1(4, K);
 
         int counter1 = 0;
+        bool rmrepeat = (option["rmrepeat"]=="T");
         for (int i = 0; i <(K_4); i++) {
             printProgress(i,K_4,"Qualify kmer from suffix tree:");
             Motif thisMotif(i);
@@ -137,10 +133,10 @@ int main(int argc, char **argv)
             thisMotif.loci = active.locateMotif(thisMotif);
             //cerr<<thisMotif.loci.size()<<endl;
             temp += thisMotif.loci.size();
-            thisMotif.calConscore(GenomeSize);
-            if (thisMotif.score&&!thisMotif.isRepeat()) {
-                if (counter1==0) {
-                    MotifHeap.push(thisMotif);
+            thisMotif.calConscore(RegionSize);
+            if (thisMotif.score) {
+                if (rmrepeat&&thisMotif.isRepeat()) {
+                    continue;
                 }
                 counter1++;
                 thisMotif.initPWM();
@@ -149,6 +145,9 @@ int main(int argc, char **argv)
                     thisMotif.testMotifTag(*gR, outPutDir, false);
                 }
                 thisMotif.sumOverallScore();
+                if (counter1==1) {
+                    MotifHeap.push(thisMotif);
+                }
                 if (MotifHeap.size()<MAXMOTIFNUM||thisMotif.overallScore>MotifHeap.top().overallScore) {
                     //has pwm loci lociscore sign noise conscore motifProb overallscore.
                     MotifHeap.push(thisMotif);
@@ -170,7 +169,7 @@ int main(int argc, char **argv)
                     
                     else {
                         //filtered motif
-                        clusterFile<<"Filtered word:\t"<<thisMotif.query<<"\t"<<thisMotif.score<<"\t"<<thisMotif.tagSTD<<"\t"<<thisMotif.tagNoise<<endl;
+                        clusterFile<<"Filtered word:\t"<<thisMotif.query<<"\t"<<thisMotif.score<<"\t"<<thisMotif.tagBiPeak<<"\t"<<thisMotif.tagNoise<<endl;
                         // for test
                         thisMotif.testMotifTag(*gR, outPutDir, true);
                     }
@@ -183,12 +182,12 @@ int main(int argc, char **argv)
             }
         }
         cerr<<"clustering result:";
-                   cerr<<"\n"<<"STAGE1(filter words with low frequence):"<<K_4-counter1<<" kmer was filtered"<<"\n";
+        cerr<<"\n"<<"STAGE1(filter words with low frequence):"<<K_4-counter1<<" kmer was filtered"<<"\n";
         if (option["mode"]=="tag"){
             cerr<<"STAGE2:"<<counter1-MotifHeap.size()<<" kmer was filtered"<<"\n";
         }
         cerr<<"Left:"<<MotifHeap.size()<<endl;
-        cerr<<"total motifs'loci size:"<<temp<<" approximate "<<GenomeSize<<endl;
+        cerr<<"total motifs'loci size:"<<temp<<" approximate "<<RegionSize<<endl;
         //need to eliminate allmotif
         if (MotifHeap.size()==0) {
             printAndExit("too strict parameters!");
@@ -214,14 +213,12 @@ int main(int argc, char **argv)
         //qualifiedMotifs[0].printMotif();
 
         Cluster temp0(qualifiedMotifs[0]);
+        
         clusters.push_back(temp0);
         
-        // for (int i=0; i<10; i++) qualifiedMotifs[i].testMotifTag(*gR,outPutDir,true);
-        // pair<int,int> tempa = qualifiedMotifs[2].editDistance(qualifiedMotifs[4]);
-        // cout<<tempa.first<<" "<<tempa.second<<endl;
         cerr<<"clustering:"<<endl;
         for (int i=1; i<maxMotifSize; i++) { 
-            float KLDiv;
+            float KLDiv=0;
             printProgress(i,maxMotifSize,"clustering:");
             int bound = clusters.size();
             for (int j=0; j<bound; j++) {
@@ -261,14 +258,14 @@ int main(int argc, char **argv)
                             }
                         }
                         clusterFile<<" "<<qualifiedMotifs[i].query;
-                        clusterFile<<qualifiedMotifs[i].tagSTD<<"dist"<<dist_shift.first<<"shift"<<dist_shift.second<<"\n";
+                        clusterFile<<qualifiedMotifs[i].tagBiPeak<<qualifiedMotifs[i].tagSymmetry<<"dist"<<dist_shift.first<<"shift"<<dist_shift.second<<"\n";
                         clusterFile<<j<<"\t";
                         if (dist_shift.second<0) {
                             for (int counter=0; counter<abs(dist_shift.second); counter++) {
                                 clusterFile<<" ";
                             }
                         }
-                        clusterFile<<" "<<clusters[j].query<<clusters[j].tagSTD<<"KL div"<<KLDiv<<endl;
+                        clusterFile<<" "<<clusters[j].query<<clusters[j].tagBiPeak<<clusters[j].tagSymmetry<<"KL div"<<KLDiv<<endl;
                     } 
                     else {
                         clusterFile<<i<<"\t";
@@ -291,11 +288,15 @@ int main(int argc, char **argv)
                     clusters[j].concatenate(qualifiedMotifs[i],i,dist_shift.second);
                     //recalculate four attributes
                     clusters[j].calPWM(qualifiedMotifs[i], dist_shift.second);
+                    if (option["mode"]=="tag"){
+                        clusters[j].reCalSumBin(qualifiedMotifs[i], *gR);
+                    }
                     clusters[j].appendLoci(qualifiedMotifs[i]);
                     clusters[j].addProb(qualifiedMotifs[i],prevSize);
-                    clusters[j].calConscore(GenomeSize);
+                    clusters[j].calConscore(RegionSize);
                     if (option["mode"]=="tag"){
-                        clusters[j].testMotifTag(*gR,outPutDir,true);
+                        //update noise and tagscore
+                        clusters[j].testMotifTag(*gR,outPutDir,false);
                     }
                     clusters[j].sumOverallScore();
                     sort(clusters.begin(),clusters.end(),compareMotif());
@@ -304,7 +305,22 @@ int main(int argc, char **argv)
                 //for test: cluster system
                 else if (dist_shift.first>0&&dist_shift.first<=MAXDISTANCE&&KLDiv>MAXKLDIV){
                     if (option["mode"]=="tag"){
-                        clusterFile<<"KLDIV not consistent:"<<"\n"<<i<<" "<<qualifiedMotifs[i].query<<qualifiedMotifs[i].tagSTD<<"dist"<<dist_shift.first<<"shift"<<dist_shift.second<<"\n"<<j<<" "<<clusters[j].query<<clusters[j].tagSTD<<endl;
+                        clusterFile<<"KLDIV not consistent:"<<"\n";
+                        clusterFile<<i<<"\t";
+                        if (dist_shift.second>=0) {
+                            for (int counter=0; counter<dist_shift.second; counter++) {
+                                clusterFile<<" ";
+                            }
+                        }
+                        clusterFile<<" "<<qualifiedMotifs[i].query;
+                        clusterFile<<qualifiedMotifs[i].tagBiPeak<<qualifiedMotifs[i].tagSymmetry<<"dist"<<dist_shift.first<<"shift"<<dist_shift.second<<"\n";
+                        clusterFile<<j<<"\t";
+                        if (dist_shift.second<0) {
+                            for (int counter=0; counter<abs(dist_shift.second); counter++) {
+                                clusterFile<<" ";
+                            }
+                        }
+                        clusterFile<<" "<<clusters[j].query<<clusters[j].tagBiPeak<<clusters[j].tagSymmetry<<"KL div"<<KLDiv<<endl;
                     }
                 }
                 else {
@@ -327,7 +343,8 @@ int main(int argc, char **argv)
         for (int j=0; j<clusters.size(); j++){
             clusters[j].trim(); 
             clusters[j].mergeLoci();
-            clusters[j].calConscore(GenomeSize);
+            clusters[j].testMotifTag(*gR,outPutDir,true);
+            clusters[j].calConscore(RegionSize);
             clusters[j].sumOverallScore();
         }
         sort(clusters.begin(),clusters.end(),compareMotif());
@@ -343,9 +360,13 @@ int main(int argc, char **argv)
 
         
         //write score info to cout
-        cout<<"Motif\tP-value\tConscore\t";
+        cout<<setw(20)<<setiosflags(std::ios::left)<<"Motif"<<"\tP-value\tConscore\t";
         for (int i=0; i<gR->tagName.size(); i++) {
-            cout<<gR->tagName[i]<<"_STD\t";
+            cout<<gR->tagName[i]<<"_Bipeaks\t";
+            
+        }
+        for (int i=0; i<gR->tagName.size(); i++) {
+            cout<<gR->tagName[i]<<"_assymmetry\t";
             
         }
         if (option["FFT"]=="T") {
@@ -388,8 +409,9 @@ int main(int argc, char **argv)
 
 void test(){
     //test locateSub
-    //float a[64]={222196,223883,224365,225399,226522,228458,230182,232294,234638,235955,237100,238276,240537,241488,244776,247591,250682,256220,261218,266507,273588,280507,288908,296303,305834,315449,326204,338612,351108,365119,380065,392915,407475,423412,438997,444292,434680,413637,384791,362230,363998,396845,451613,503894,542050,560474,556176,536605,515048,494379,477460,460567,442164,425085,411363,396023,381178,368042,356459,344080,334199,323655,314402,307031};
-    float a[64]={102.75,114.75,124.275,124.275,128,127.35,109.975,103.375,109.525,114.725,124.375,127.275,130.975,126.5,130.15,125.4,141.025,150.475,145.325,143.7,129.65,118.825,104.55,102.05,103.95,111.325,125.825,146.375,152.575,153.125,152.4,155.925,146.1,148.8,163.925,157.6,158.525,137.9,131.125,117.9,116.375,113.1,118.9,121.85,143.275,135.925,155.75,148.65,143.875,146.075,132,122.45,123.525,115.9,114.5,109.65,99.575,93.85,98.525,92.95,103.85,114.275,117.4,119.475};
+    /*
+    float a[64]={222196,223883,224365,225399,226522,228458,230182,232294,234638,235955,237100,238276,240537,241488,244776,247591,250682,256220,261218,266507,273588,280507,288908,296303,305834,315449,326204,338612,351108,365119,380065,392915,407475,423412,438997,444292,434680,413637,384791,362230,363998,396845,451613,503894,542050,560474,556176,536605,515048,494379,477460,460567,442164,425085,411363,396023,381178,368042,356459,344080,334199,323655,314402,307031};
+    //float a[64]={102.75,114.75,124.275,124.275,128,127.35,109.975,103.375,109.525,114.725,124.375,127.275,130.975,126.5,130.15,125.4,141.025,150.475,145.325,143.7,129.65,118.825,104.55,102.05,103.95,111.325,125.825,146.375,152.575,153.125,152.4,155.925,146.1,148.8,163.925,157.6,158.525,137.9,131.125,117.9,116.375,113.1,118.9,121.85,143.275,135.925,155.75,148.65,143.875,146.075,132,122.45,123.525,115.9,114.5,109.65,99.575,93.85,98.525,92.95,103.85,114.275,117.4,119.475};
     vector<float> b(a,a+64);
     //cerr<<b<<locateSubscript(b, b.begin(), b.end(), 120)<<endl;
     //test
@@ -410,7 +432,7 @@ void test(){
     for (int i=0; i<b.size(); i++) {
         cerr<<tempFFT.origin[i].real()<<"\t";
     }
-    cerr<<"\n"<<"tagNoise"<<tempFFT.denoise(10);
+    cerr<<"\n"<<"tagNoise"<<tempFFT.denoise(20)*NOISEWEIGHT;
     for (int i=0; i<b.size(); i++) {
         variance += pow1(b[i]-1/float(b.size()),2);
     }
@@ -423,5 +445,21 @@ void test(){
         cerr<<tempFFT.invTrans[i].real()<<"\t";
     }
     cerr<<endl;
+     */
+    float fvec[65]={1.37328e-05,6.53941e-06,1.30788e-05,1.30788e-05,0.00022234,0.000268116,0.000251113,0.000245228,0.000288061,0.000306208,0.00027956,0.000291331,0.000235419,0.000249805,0.00024719,0.000232476,0.000251113,0.000255691,0.000256835,0.000305554,0.000314873,0.000518085,0.000557975,0.000603261,0.000775574,0.000794211,0.000812685,0.000797645,0.000743694,0.000814156,0.00076413,0.000725221,0.000744675,0.000657865,0.000679935,0.00073176,0.000633669,0.00060604,0.000524951,0.000410675,0.000354109,0.000292639,0.000260759,0.000248988,0.000327461,0.000362283,0.000376016,0.000482608,0.000475415,0.00044517,0.000505823,0.000432255,0.000471164,0.000398904,0.000324845,0.000314709,0.000279723,0.000241141,0.000207626,0.000196182,0.000188825,0.000121143,0.000122123,8.33775e-05,4.31601e-05};
+    vector<float> tempVec(fvec,fvec+64);
+    FFT tempFFT(tempVec);
+    cerr<<(tempFFT.denoise(int(SAMPLESIZE*5/8))*NOISEWEIGHT)<<endl;
+    /* smoothing */
+    vector<float> tempBin;
+    for (int i=0; i<SAMPLESIZE*2; i++) {
+        tempBin.push_back(tempFFT.invTrans[i].real()>0?tempFFT.invTrans[i].real():0);
+    }
+    tempBin.push_back(fvec[64]);
+    cerr<<tempBin<<endl;
+    cerr<<testSymmety(tempBin)<<endl;
+    
+    
     assert(0==1);
 }
+

@@ -4,7 +4,9 @@
 //
 //  Created by zhang yizhe on 12-5-20.
 //  Copyright (c) 2012年 SJTU. All rights reserved.
-//
+//  History version
+//  Version 1.0 (2012-6-28) 
+//  Version 1.1 (2012-7-10)  Add FFT
 
 #ifndef bwt_common_h
 #define bwt_common_h
@@ -38,10 +40,13 @@ void printUsage();
 //define motif length
 extern int K;
 extern float DELTA;
+extern int MAXSHIFT;
+extern int MAXDISTANCE;
+extern float MAXKLDIV;
 extern map<string,string> option;
 
-
-const string MOSHVERSION = "Version 1.0 (2012-6-28)";
+//
+const string MOSHVERSION = "Version 1.1 (2012-7-10)";
 
 
 
@@ -58,13 +63,16 @@ const int offset=30;    //gap
 
 //cluster
 const int MAXCLUSTERNUM = 40;
-const int MAXMOTIFNUM = 800;
-const int MAXDISTANCE = 12;
-const int SHIFT = 2;
-const float MAXKLDIV = 0.05;
-//noise vs std  half to half
+const int MAXMOTIFNUM = 1000;
+
+
+
+
+//noise vs bipeak half to half
 const int NOISEWEIGHT = 10000;
-const int STDWEIGHT = 1000;
+const int BIPEAKWEIGHT = 150;
+const int SYMMETRYWEIGHT = 200;
+const int PEAKRANGE = int(500/(BINSPAN+offset));
 
 
 //cut tag extend bound
@@ -72,6 +80,7 @@ const int EXTENDBOUND = (SAMPLESIZE+1)*BINSPAN+offset*SAMPLESIZE+1;
 
 //FFT
 const float PI = 3.1416;
+const float SMALLNUM = 0.000001;
 
 
 
@@ -88,15 +97,18 @@ public:
     genomeRegions(int num):extend(num),segmentStartPos(0){segmentStartPos.push_back(0);};
     vector <genomeRegion> genomes;
     //final seqs
+    map <string,string> rawGenome;
     map<string,string> regionSeqs;
     //final tags
+    map <string,map<string,vector<short int> > > rawTag;
+    map <string,map<string,vector<short int> > > rawTagSegments;
     map<string,vector <short int> > regionTags;
     //genome prob for trans and single site
     float prob[5][4];
     //total size of each genome(<200M).
     map <string,int> genomeLength;
-    map <string,string> rawGenome;
-    map <string,map<string,vector<short int> > > rawTag;
+    
+    
     vector<string> chromeNames;
     vector<string> tagName;
 
@@ -115,6 +127,7 @@ public:
     bool readBed(const string &filename);
     //read and write rawTag;
     bool readWig(const string &filename);
+    bool catenateTags();
     
     bool readFasta(const string &filename);
     int segmentCount;
@@ -138,7 +151,8 @@ inline bool compareGenome(genomeRegion gr1, genomeRegion gr2)
 
 inline void printAndExit(string errorInfo)
 {
-	cerr<<errorInfo<<endl;
+    
+	cerr<<"\nFATAL:"<<errorInfo<<"!"<<endl;
 	exit(1);
 }
 
@@ -229,11 +243,33 @@ inline int alp2num(const char& name){
     }
 }
 
+
 float pow1(float base,int index);
 string antisense(const string& tempString);
 char degenerate(char a,char b);
 //assume sorted , locate subscript return <sub,BINSPAN>
 pair<int,int> locateSubscript(const vector<int> &listObj, vector<int>::const_iterator begin,vector<int>::const_iterator end, int queryVal);
+float symKLDiv(const vector<float> &lhs, const vector<float> &rhs);
+inline float normalization(vector<float>& fvec){
+    float total;
+    for (int i=0; i<fvec.size(); i++) {
+        total += fvec[i];
+    }
+    for (int i=0; i<fvec.size(); i++) {
+        fvec[i]/=total;
+    }
+    return total;
+}
+inline float testSymmety(const vector<float> &fvec){
+    vector<float> lhs(fvec.begin(),fvec.begin()+fvec.size()/2);
+    normalization(lhs);
+    vector<float> rhs(fvec.rbegin(),fvec.rbegin()+fvec.size()/2);
+    normalization(rhs);
+    return symKLDiv(lhs,rhs);
+}
+
+
+//numeric
 float calPhi(float x);
 float LogOnePlusX(float x);
 float RationalApproximation(float t);
