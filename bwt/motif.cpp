@@ -105,6 +105,7 @@ inline int Motif::mapLoci(int genomePos,const vector<int>& StartPs){
 
 
 void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
+    // get intensity noise bipeak asymmetry
     assert(loci.size()!=0);
     //only need loci and tagSeq
     tagBiPeak.clear();
@@ -130,14 +131,19 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
                         sumBin[l][t] += tag[thisLociCenter+j];
                     }
                 }
+
             }
             for (int i=0; i<SAMPLESIZE*2+1; i++) {
                 totalAround += sumBin[i][t];
+            }
+            if (totalAround==0) {
+                totalAround+=SMALLNUM;
             }
             for (int i=0; i<SAMPLESIZE*2+1; i++) {
                 //normalization for KL divergence
                 sumBin[i][t] /= totalAround;
             }
+            signalIntensity.push_back(totalAround/loci.size());
         }
     }
     for (int t=0; t<gR.tagName.size(); t++) {
@@ -273,7 +279,7 @@ bool Motif::ascending(vector<char> &x,const vector<int> &traverseP,int &travInde
 
 //loci methods
 
-bool Motif::writeLoci(ostream &s,const genomeRegions &gR){
+bool Motif::writeLoci(ostream &s,genomeRegions &gR){
     //cerr<<query<<lociScore.size()<<" "<<loci.size()<<endl;
     assert(lociScore.size()==loci.size());
     string strand;
@@ -284,6 +290,11 @@ bool Motif::writeLoci(ostream &s,const genomeRegions &gR){
     s<<">"<<query<<"_lociSize"<<loci.size()<<"\n";
     try {
         for (int i=0; i<loci.size(); i++) {
+            Motif tempM(1);
+            if (option["mode"]=="tag") {
+                tempM.loci.push_back(loci[i]);
+                tempM.testMotifTag(gR ,"", false);
+            }
             sub_dist = locateSubscript(gR.segmentStartPos, gR.segmentStartPos.begin(), gR.segmentStartPos.end(), loci[i]);
             if (sub_dist.first==-1) {
                 continue;
@@ -303,7 +314,21 @@ bool Motif::writeLoci(ostream &s,const genomeRegions &gR){
             else {
                 continue;
             }
-            s<<chr<<"\t"<<startP<<"\t"<<endP<<"\t"<<strand<<"\t"<<lociScore[i]<<"\n";
+            s<<chr<<"\t"<<startP<<"\t"<<endP<<"\t"<<strand<<"\t"<<lociScore[i];
+            //put four
+            for (int i=0; i<tempM.tagBiPeak.size(); i++) {
+                s<<tempM.tagBiPeak[i]<<"\t";
+            }
+            for (int i=0; i<tempM.tagSymmetry.size(); i++) {
+                s<<tempM.tagSymmetry[i]<<"\t";
+            }
+            for (int i=0; i<tempM.tagNoise.size(); i++) {
+                s<<tempM.tagNoise[i]<<"\t";
+            }
+            for (int i=0; i<tempM.signalIntensity.size(); i++) {
+                s<<tempM.signalIntensity[i]<<"\t";
+            }
+            s<<"\n";
         }
     } catch (const exception &e) {
         cerr<<"Write loci file err:"<<e.what()<<endl;
@@ -431,10 +456,11 @@ void Cluster::concatenate(const Motif& m,int index,int optimShift){
 }
 //calculate KL divergence: motif to cluster
 float Cluster::tagDistrDistance(const Motif& m){
+    //major distrib:cluster
     float temp = 0;
     for (int t=0; t<sumBin[0].size(); t++) {
         for (int l=0; l<SAMPLESIZE*2+1; l++) {
-            temp += sumBin[l][t]*log10f(sumBin[l][t]+SMALLNUM/m.sumBin[l][t]+SMALLNUM);
+            temp += sumBin[l][t]*log10f((sumBin[l][t]+SMALLNUM)/(m.sumBin[l][t]+SMALLNUM));
         }
     }
     return temp;
@@ -478,6 +504,7 @@ void Cluster::trim(){
 }
 
 void Cluster::reCalSumBin(const Motif& m,const genomeRegions &gR){
+    //reCalsumBin and signalIntensity
     for (int t=0; t<gR.tagName.size(); t++) {
         for (int l=0; l<2*SAMPLESIZE+1; l++) {
             sumBin[l][t]=(sumBin[l][t]*loci.size()+m.sumBin[l][t]*m.loci.size());
@@ -494,11 +521,13 @@ void Cluster::reCalSumBin(const Motif& m,const genomeRegions &gR){
 }
 
 bool Cluster::trivial(int pos){
+    /* 
     //only one
     for (int i=0; i<4; i++) {
         if (pwm[i][pos]==totalPWM[pos])
             return true;
     }
+    */
     //all same
     for (int i=0; i<4; i++) {
         assert(totalPWM[pos]!=0);

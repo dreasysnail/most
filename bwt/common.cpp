@@ -17,6 +17,8 @@ float DELTA;
 int MAXSHIFT;
 int MAXDISTANCE;
 float MAXKLDIV;
+int MAXCLUSTERNUM;
+int MAXMOTIFNUM;
 map<string,string> option;
 
 
@@ -80,9 +82,15 @@ void parseCommandLine(int argc,
     //if remove repeat
     option          ["rmrepeat"]      =  "T";
     optionRequire   ["rmrepeat"]      =   false;
-    //if remove repeat
+    //
     option          ["clusterStringency"]      =  "0";
     optionRequire   ["clusterStringency"]      =   false;
+    //
+    option          ["maxclusternum"]      =  "400";
+    optionRequire   ["maxclusternum"]      =   false;
+    //
+    option          ["maxmotifnum"]      =  "500";
+    optionRequire   ["maxmotifnum"]      =   false;
     // Parse the command line.
     string option_name = "";
     string option_value = "";
@@ -219,6 +227,20 @@ void parseCommandLine(int argc,
                     printAndExit("clusterStringency should be within [0,1), <0.05 recommend");
                 }
             }
+            else if (option_name == "-cn") {
+                option["maxclusternum"] = option_value;
+                if (atoi(option["maxclusternum"].c_str())<2||
+                    atoi(option["maxclusternum"].c_str())>500) {
+                    printAndExit("cluster num must be within [1,500]");
+                }
+            }
+            else if (option_name == "-mn") {
+                option["maxmotifnum"] = option_value;
+                if (atoi(option["maxmotifnum"].c_str())<2||
+                    atoi(option["maxmotifnum"].c_str())>20000) {
+                    printAndExit("cluster num must be within [1,20000]");
+                }
+            }
             else {
                 cerr<<"unrecognized option "<<option_name<<"! skip"<<endl;
                 continue;
@@ -256,6 +278,8 @@ void parseCommandLine(int argc,
     MAXDISTANCE = int(4*K*(1-stringency)/3);
     MAXKLDIV = float(0.01+0.07*(1-stringency));
     DELTA = NormalCDFInverse(1.0-atof(option["pvalue"].c_str()))+1.0;
+    MAXMOTIFNUM = atoi(option["maxmotifnum"].c_str());
+    MAXCLUSTERNUM = atoi(option["maxclusternum"].c_str());
     cerr<<endl;
     
 }
@@ -268,25 +292,27 @@ void printUsage()
 	usage		+=	"                             jeremy071242044@gmail.com\n";
 	usage		+=	"***********************************************************************************************\n\n";
 	usage		+=	"    mosh [option: <parameter1> <parameter2>]  \n\n";
+    usage		+=	"    -h help                    Print help information.\n\n";
 	usage		+=	"    Required Parameters:\n\n";
 	usage		+=	"    -m <normal/tag/help>       Runing mode:tagfile should be specified if tag mode is selected\n\n";
 	usage		+=	"    -f <DNA sequence file>     Whole genome DNA sequences\n\n";
     usage		+=	"    -b <BED file>              Regions of interest\n\n";
     usage		+=	"    -t <WIG file>              Tag file for Histone marks or other sources\n\n";
     //usage		+=	"    CAVEAT:WIG FILE SHOULD BE SORTED\n\n";
-	usage		+=	"    -h help                    Print help information.\n\n";
-    usage		+=	"    Optional Parameters:\n\n";
+    usage		+=	"    \nOptional Parameters:\n\n";
     usage		+=	"    -o <outputDIR>             Specify an output directory.\n\n";
     usage		+=	"    -bo <0,1>                  Order for background sequence\n\n";
     usage		+=	"    -br <region/genome>        Specify background sequence\n\n";
     usage		+=	"    -locifile <T/F>            Whether or not loci file of each cluster should be exported\n\n";
-    usage		+=	"    -regionfile <T/F>          Whether or not loci file of each cluster should be exported\n\n";
+    usage		+=	"    -regionfile <T/F>          Whether or not region file of each cluster should be exported\n\n";
     usage		+=	"    -fft <T/F>                 Whether or not to cast FFT on each bins(default T)\n\n";
     usage		+=	"    -trim <10-100 integer>     Larger trimer means larger length of cluster\n\n";
     usage		+=	"    -cl <4-30 integer>         maximal length of single cluster\n\n";
     usage		+=	"    -p(-pvalue) <0-1 float>    P-value for low occurence word filtering\n\n";
     usage		+=	"    -rmrepeat <T/F>            Whether or not to remove repeat words(default T)\n\n";
     usage		+=	"    -cs <0-1 float>            Stringency of clustering(default 0.05)\n\n";
+    usage		+=	"    -cn <1-500 integer>        maximal number of clusters(default 40)\n\n";
+    usage		+=	"    -mn <1-20000 integer>         maximal number of qualified motifs to be clustered(default 500)\n\n";
 	cerr<<usage<<endl;
 }
 
@@ -360,12 +386,8 @@ bool genomeRegions::readWig(const string &filename){
             if (lineCounter==1) {
                 found = line.find("histone=");
                 if (found!=string::npos){
-                    size_t found2 = line.find("span=");
-                    if (found2 == line.npos) {
-                        cerr<<"FATAL: Wigfile's info line contains no \"span=\""<<endl;
-                        exit(1);
-                    }
-                    tagName.push_back(line.substr(found+8,found2-found-9));
+                    size_t found2 = line.substr(found+8,line.npos).find_first_of(" "); 
+                    tagName.push_back(line.substr(found+8,found2));
                     
                 }
                 else {
@@ -404,14 +426,18 @@ bool genomeRegions::readWig(const string &filename){
             if (lineCounter==1) {
                 cerr<<"Find Tag "<<tagName.back()<<" mode "<<modelabel[mode]<<endl;
             }
-            //span=
+            //span= or step=
             found = line.find("span=");
-            if (found!=string::npos){
-                wigStep=atoi(line.substr(found+5,line.size()-found-5).c_str());
+            size_t found1 = line.find("step=");
+            if (found!=string::npos&&found1!=string::npos) {
+                printAndExit("check wig file's info line: shouldn't contain both span= and step= ");
+            }
+            else if (found==string::npos&&found1==string::npos) {
+                printAndExit("check wig file's info line: should contain span=**");
             }
             else {
-                cerr<<"check wig file's info line: should contain span=**"<<endl;
-                exit(0);
+                found = min(found, found1);
+                wigStep=atoi(line.substr(found+5,line.size()-found-5).c_str());
             }
             if (mode==1) {
                 currentChr = "";
@@ -574,15 +600,15 @@ bool genomeRegions::readFasta(const string &filename){
 }
 
 
-
+//for allchrom
 void genomeRegions::getSeq(const string& outPutDir){
     string fileName = outPutDir+"/allregions.fa";
     ofstream regionFile(fileName.c_str());
     vector<genomeRegion>::iterator it;
 
     //chr1-chr19-chrX
-    for (it = genomes.begin(); it!=genomes.end(); it++) {
-        appendSeq(regionFile,it->startP,it->endP,it->chr);
+    for (it = genomes.begin(); it!=genomes.end();) {
+        appendSeq(regionFile,it);
     }
     //clear memory
     sort(chromeNames.begin(), chromeNames.end(),chrCompare);
@@ -597,16 +623,12 @@ void genomeRegions::getSeq(const string& outPutDir){
 }
 
 //appendSeq to 
-void inline genomeRegions::appendSeq(ostream &outFile,int startCut,int endCut,string &currentChr){
+void genomeRegions::appendSeq(ostream &outFile,vector<genomeRegion>::iterator& currentGenomeRegion){
+    int startCut=currentGenomeRegion->startP;
+    int endCut=currentGenomeRegion->endP;
+    string &currentChr=currentGenomeRegion->chr;
     //cout<<currentChr<<" "<<startCut<<" "<<endCut<<" "<<rawGenome[currentChr].substr(startCut,endCut-startCut+1)<<endl;
-    segmentCount++;
-    if (endCut<genomeLength[currentChr]-1) {
-        segmentStartPos.push_back(endCut-startCut+2+segmentStartPos.back());
-    }
-    else {
-        segmentStartPos.push_back(genomeLength[currentChr]+1-startCut+segmentStartPos.back());
-    }
-    segmentGenomePos.push_back(make_pair(currentChr, startCut));
+    
     
     try {
         if (endCut<=startCut+1) {
@@ -625,16 +647,29 @@ void inline genomeRegions::appendSeq(ostream &outFile,int startCut,int endCut,st
             }
             outFile<<endl;
         }
+        //update segmentstart pos
+        segmentCount++;
+        if (endCut<genomeLength[currentChr]-1) {
+            segmentStartPos.push_back(endCut-startCut+2+segmentStartPos.back());
+        }
+        else {
+            segmentStartPos.push_back(genomeLength[currentChr]+1-startCut+segmentStartPos.back());
+        }
+        segmentGenomePos.push_back(make_pair(currentChr, startCut));
+        //next iter
+        currentGenomeRegion++;
     } catch (exception &e) {
+        currentGenomeRegion = genomes.erase(currentGenomeRegion);
         cerr<<e.what()<<endl;
         cerr<<"Seq insert error: chrome:"<<currentChr<<" start:"<<startCut<<" end:"<<endCut<<" chromesize"<<rawGenome[currentChr].size()<<endl;
-        return;
-    }
 
+    }
+    return;
 }
 
 int genomeRegions::appendReverseGenome(char* T){
     //extend segmentStartPos
+    //cerr<<segmentStartPos.size()<<segmentCount+1<<endl;
     assert(segmentStartPos.size()==segmentCount+1);
     assert(segmentGenomePos.size()==segmentCount);
     int Halfway = segmentStartPos.back();
@@ -785,9 +820,6 @@ void genomeRegions::appendTag(int a,int b,const string& chr,const string& thista
         b += EXTENDBOUND;
         int end=b;
         //assign this segment with 0
-        if (a>=genomeLength[chr]) {
-            end=a;
-        }
         if (b>genomeLength[chr]-1) {
             end=genomeLength[chr]-1;
         }

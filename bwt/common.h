@@ -43,6 +43,8 @@ extern float DELTA;
 extern int MAXSHIFT;
 extern int MAXDISTANCE;
 extern float MAXKLDIV;
+extern int MAXCLUSTERNUM;
+extern int MAXMOTIFNUM;
 extern map<string,string> option;
 
 //
@@ -61,9 +63,8 @@ const int offset=30;    //gap
 //const float SINGIFTHRESH = 2;
 //const float SCORETHRESH =5;
 
-//cluster
-const int MAXCLUSTERNUM = 40;
-const int MAXMOTIFNUM = 1000;
+
+
 
 
 
@@ -114,7 +115,7 @@ public:
 
     int extend;
     void getSeq(const string& outPutDir);
-    void inline appendSeq(ostream &outFile,int startP,int endP,string &currentChr);
+    void appendSeq(ostream &outFile,vector<genomeRegion>::iterator& currentGenomeRegion);
     int appendReverseGenome(char* T);
     void getTagBed(const string& thistag,const string& currentChr );    //get 0-1 sequence from bed file
     void appendTag(int a,int b,const string& chr,const string& thistag);

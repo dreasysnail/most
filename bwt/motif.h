@@ -35,6 +35,7 @@ class Motif{
     float motifProb;
     //each vector is a bin   sumBin[bin][tag]
     vector<float> sumBin[2*SAMPLESIZE+1];
+    vector<float> signalIntensity;
     //vector<int> expMotifs;
     //std::vector<string> Clusterexp;
     //conserve score;
@@ -76,7 +77,7 @@ class Motif{
     //write loci to file
     //score for each occurence
     vector<int> lociScore;
-    bool writeLoci(ostream &s,const genomeRegions &gR);
+    bool writeLoci(ostream &s,genomeRegions &gR);
     void initLociScore();
     //inlines
     inline bool noWildcard();
@@ -244,14 +245,22 @@ void inline Motif::printMotif(){
             cout<<tagNoise[i]<<"\t";
         }
     }
+    for (int i=0; i<signalIntensity.size(); i++) {
+        cout<<signalIntensity[i]<<"\t";
+    }
     cout<<loci.size()<<endl;
 }
 //print pwm to stream
 ostream &operator<<( ostream &s, Motif &motif );
 //clustering
 inline void Cluster::appendLoci(const Motif& m){
+    //reCal insentity if tag
+    if (option["mode"]=="tag") {
+        for (int i=0; i<signalIntensity.size(); i++) {
+            signalIntensity[i] = (signalIntensity[i]*loci.size()+m.signalIntensity[i]*m.loci.size())/(loci.size()+m.loci.size());
+        }
+    }
     loci.insert(loci.end(),m.loci.begin(),m.loci.end());
-    //cout<<"+"<<Motif::translate(currentMotif.expMotifs[i])<<allmotifs[currentMotif.expMotifs[i]].loci.size()<<"="<<loci.size()<<endl;
 }
 inline void Cluster::addProb(const Motif& m,int prevSize){
     motifProb = ((m.motifProb/K)*m.loci.size()+(motifProb/prevSize)*loci.size())/(m.loci.size()+loci.size())*query.size();
