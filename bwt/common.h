@@ -60,9 +60,6 @@ const int BINSPAN=10;     //range
 const int offset=30;    //gap
 //must be power of 2
 
-//const float SINGIFTHRESH = 2;
-//const float SCORETHRESH =5;
-
 
 
 

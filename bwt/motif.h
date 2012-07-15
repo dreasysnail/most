@@ -54,7 +54,8 @@ class Motif{
     
     void locateMotif(const char T[]);
     inline int mapLoci(int genomePos,const vector<int>& tag);
-    void testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw);
+    void testMotifTag(genomeRegions &gR,bool ifDraw);
+    void drawDist(genomeRegions &gR);
     void initBin(genomeRegions &gR);
     //order 0 order 1 
     void initProb(const genomeRegions& gR,int order);
@@ -92,8 +93,7 @@ class Motif{
     void inline printMotif();  
     inline static string translate(int i);
     //cluster method
-    
-    
+
 };
 
 class Cluster: public Motif{
@@ -114,6 +114,27 @@ public:
     vector<int> totalPWM;
     int sumPWM();
 };
+
+//temp roc ploting
+class tempLociScore: public Motif{
+public:
+    tempLociScore(const Motif &m,int num):Motif(m),counts(num),TP(false){index=-2;};
+    void CountOnly(){myScore=counts;}
+    // problematic
+    void CountAndBipeak(){myScore=counts+LogOnePlusX(tagBiPeak[0]+tagBiPeak[1]+tagBiPeak[2]);}
+    void CountAndIntensity(){myScore=counts+LogOnePlusX(signalIntensity[0]+signalIntensity[1]+signalIntensity[2]);}
+    int counts;
+    int myScore;
+    bool TP;
+};
+
+class compareLoci {
+public:
+    bool operator()(tempLociScore lhs, tempLociScore rhs){
+        return lhs.myScore>rhs.myScore;
+    }
+};
+
 
 
 
@@ -265,7 +286,6 @@ inline void Cluster::appendLoci(const Motif& m){
 inline void Cluster::addProb(const Motif& m,int prevSize){
     motifProb = ((m.motifProb/K)*m.loci.size()+(motifProb/prevSize)*loci.size())/(m.loci.size()+loci.size())*query.size();
 }
-
 
 
 #endif

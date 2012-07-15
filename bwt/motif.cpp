@@ -104,7 +104,7 @@ inline int Motif::mapLoci(int genomePos,const vector<int>& StartPs){
 
 
 
-void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
+void Motif::testMotifTag(genomeRegions &gR,bool ifDraw){
     // get intensity noise bipeak asymmetry
     assert(loci.size()!=0);
     //only need loci and tagSeq
@@ -126,6 +126,7 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
                     continue;
                 }
                 int thisLociCenter = mapLoci(loci[i],gR.segmentStartPos);
+                //cerr<<tag[thisLociCenter]<<" "<<thisLociCenter<<endl;
                 for (int l=0; l<2*SAMPLESIZE+1; l++) {
                     for (int j=(l-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j<(l+1-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j++) {
                         sumBin[l][t] += tag[thisLociCenter+j];
@@ -185,26 +186,30 @@ void Motif::testMotifTag(genomeRegions &gR,const string& outPutDir,bool ifDraw){
         tagBiPeak.push_back(biPeak*BIPEAKWEIGHT);
         tagSymmetry.push_back(assymetry*SYMMETRYWEIGHT);
         //cout<<sumMotif<<sumBin<<endl;
-        //cout<<tagName<<" "<<query<<" "<<sumMotif<<" "<<" "<<(2*BINSPAN+query.size()-1)<<" "<<sumMotif/counter/(2*BINSPAN+query.size()-1)<<endl;
-        if (ifDraw) {
-            string fileName = outPutDir + "/motif.dist";
-            ofstream distFile(fileName.c_str(),ios::app);
-            if (!distFile) {
-                printAndExit("Error! Fail to open distFile for writing!");
-            }
-            distFile<<">"<<query<<"_P_value_"<<pvalue()<<"_Tag_"<<gR.tagName[t]<<"_Bipeak_"<<tagBiPeak<<"_symmetry_"<<tagSymmetry<<"\n";
-            for (int l=0; l<2*SAMPLESIZE+1; l++) {
-                int pos = (l-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE);
-                distFile<<pos<<"\t"<<sumBin[l][t]<<"\n";
-            }
-            distFile<<endl;
-        }
-        
-
-        
+        //cout<<tagName<<" "<<query<<" "<<sumMotif<<" "<<" "<<(2*BINSPAN+query.size()-1)<<" "<<sumMotif/counter/(2*BINSPAN+query.size()-1)<<endl;        
+    }
+    if (ifDraw) {
+        drawDist(gR);
     }
 }
 
+void Motif::drawDist(genomeRegions& gR){
+    string fileName = option["outdir"] + "/motif.dist";
+    ofstream distFile(fileName.c_str(),ios::app);
+    if (!distFile) {
+        printAndExit("Error! Fail to open distFile for writing!");
+    }
+    distFile<<">"<<query<<"_Tag_"<<gR.tagName<<"_Bipeak_"<<tagBiPeak<<"_symmetry_"<<tagSymmetry<<"\n";
+    for (int l=0; l<2*SAMPLESIZE+1; l++) {
+        int pos = (l-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE);
+        distFile<<pos<<"\t";
+        for (int t=0; t<gR.tagName.size(); t++) {
+            distFile<<sumBin[l][t]<<"\t";
+        }
+        distFile<<"\n";
+    }
+    distFile<<endl;
+}
 
 void Motif::initBin(genomeRegions &gR){
     int tagSize = gR.tagName.size();
@@ -288,16 +293,26 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
     string chr;
     pair<int,int> sub_dist;
     s<<">"<<query<<"_lociSize"<<loci.size()<<"\n";
+    //for roc 
+    vector<tempLociScore> lociScores;
+    int extender=atoi(option["extend"].c_str());
     try {
         for (int i=0; i<loci.size(); i++) {
             Motif tempM(1);
             if (option["mode"]=="tag") {
+                tempM.loci.clear();
                 tempM.loci.push_back(loci[i]);
-                tempM.testMotifTag(gR ,"", false);
+                tempM.testMotifTag(gR ,false);
+                //for roc
+                lociScores.push_back(tempLociScore(tempM,lociScore[i]));
             }
             sub_dist = locateSubscript(gR.segmentStartPos, gR.segmentStartPos.begin(), gR.segmentStartPos.end(), loci[i]);
             if (sub_dist.first==-1) {
                 continue;
+            }
+            //for roc
+            if (sub_dist.second>extender/2-100&&sub_dist.second<extender/2+100) {
+                lociScores.back().TP=true;
             }
             if (loci[i]<=RegionSize/2) {
                 strand = "+";
@@ -314,21 +329,102 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
             else {
                 continue;
             }
-            s<<chr<<"\t"<<startP<<"\t"<<endP<<"\t"<<strand<<"\t"<<lociScore[i];
-            //put four
+            s<<chr<<"\t"<<startP<<"\t"<<endP<<"\t"<<strand<<"\t"<<lociScore[i]<<"\t";
+            //put two
             for (int i=0; i<tempM.tagBiPeak.size(); i++) {
                 s<<tempM.tagBiPeak[i]<<"\t";
-            }
-            for (int i=0; i<tempM.tagSymmetry.size(); i++) {
-                s<<tempM.tagSymmetry[i]<<"\t";
-            }
-            for (int i=0; i<tempM.tagNoise.size(); i++) {
-                s<<tempM.tagNoise[i]<<"\t";
             }
             for (int i=0; i<tempM.signalIntensity.size(); i++) {
                 s<<tempM.signalIntensity[i]<<"\t";
             }
             s<<"\n";
+        }
+        //for roc
+        if (option["ROC"]=="T") {
+            // from big to small
+            ofstream rocFile((option["outdir"]+"/roc.txt").c_str(),ios::app);
+            for (int i=0; i<lociScores.size(); i++) {
+                lociScores[i].CountOnly();
+            }
+            sort(lociScores.begin(), lociScores.end(), compareLoci());
+            int tempIndex=0;
+            int tempTP=0;
+            int tempTPFP=0;
+            int TPFN=gR.segmentCount;
+            int TN=gR.segmentCount*(extender/K); 
+            rocFile<<"only count"<<"\n";
+            rocFile<<"thresh\tsensitivity\tprecision\tspecificity\n";
+            for (int scorethresh=int(lociScores[0].myScore+1); scorethresh>=int(lociScores.back().myScore-1); scorethresh--) {
+                while (lociScores[tempIndex].myScore>(scorethresh-1)) {
+                    if (tempIndex>=lociScores.size()) {
+                        break;
+                    }   
+                    tempTPFP++;
+                    
+                    assert(lociScores[tempIndex].loci.size()==1);
+                    if (lociScores[tempIndex].TP) {
+                        tempTP++;
+                    }
+                    tempIndex++;
+                }
+                rocFile<<scorethresh<<"\t"<<tempTP/float(TPFN)<<"\t"<<tempTP/float(tempTPFP)<<"\t"<<TN/float(TN+tempTPFP-tempTP)<<"\n";
+            }
+            // roc 2
+            
+            for (int i=0; i<lociScores.size(); i++) {
+                lociScores[i].CountAndBipeak();
+            }
+            sort(lociScores.begin(), lociScores.end(), compareLoci());
+            tempIndex=0;
+            tempTP=0;
+            tempTPFP=0;
+            rocFile<<"count and bipeak"<<"\n";
+            rocFile<<"thresh\tsensitivity\tprecision\tspecificity\n";
+            for (int scorethresh=int(lociScores[0].myScore+1); scorethresh>=int(lociScores.back().myScore-1); scorethresh--) {
+                while (lociScores[tempIndex].myScore>(scorethresh-1)) {
+                    if (tempIndex>=lociScores.size()) {
+                        break;
+                    }   
+                    tempTPFP++;
+                    
+                    assert(lociScores[tempIndex].loci.size()==1);
+                    if (lociScores[tempIndex].TP) {
+                        tempTP++;
+                    }
+                    tempIndex++;
+                }
+                rocFile<<scorethresh<<"\t"<<tempTP/float(TPFN)<<"\t"<<tempTP/float(tempTPFP)<<"\t"<<TN/float(TN+tempTPFP-tempTP)<<"\n";
+            }
+
+            
+            // roc 3
+            
+            for (int i=0; i<lociScores.size(); i++) {
+                lociScores[i].CountAndIntensity();
+            }
+            sort(lociScores.begin(), lociScores.end(), compareLoci());
+            tempIndex=0;
+            tempTP=0;
+            tempTPFP=0;
+            rocFile<<"count and intensity"<<"\n";
+            rocFile<<"thresh\tsensitivity\tprecision\tspecificity\n";
+            for (int scorethresh=int(lociScores[0].myScore+1); scorethresh>=int(lociScores.back().myScore-1); scorethresh--) {
+                while (lociScores[tempIndex].myScore>(scorethresh-1)) {
+                    if (tempIndex>=lociScores.size()) {
+                        break;
+                    }   
+                    tempTPFP++;
+                    
+                    assert(lociScores[tempIndex].loci.size()==1);
+                    if (lociScores[tempIndex].TP) {
+                        tempTP++;
+                    }
+                    tempIndex++;
+                }
+                rocFile<<scorethresh<<"\t"<<tempTP/float(TPFN)<<"\t"<<tempTP/float(tempTPFP)<<"\t"<<TN/float(TN+tempTPFP-tempTP)<<"\n";
+            }
+
+            option["ROC"]="F";
         }
     } catch (const exception &e) {
         cerr<<"Write loci file err:"<<e.what()<<endl;
@@ -512,6 +608,9 @@ void Cluster::reCalSumBin(const Motif& m,const genomeRegions &gR){
         float totalAround = 0;
         for (int i=0; i<SAMPLESIZE*2+1; i++) {
             totalAround += sumBin[i][t];
+        }
+        if (totalAround==0) {
+            totalAround+=SMALLNUM;
         }
         for (int i=0; i<SAMPLESIZE*2+1; i++) {
             //normalization

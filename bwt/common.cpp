@@ -91,6 +91,12 @@ void parseCommandLine(int argc,
     //
     option          ["maxmotifnum"]      =  "500";
     optionRequire   ["maxmotifnum"]      =   false;
+    //
+    option          ["extend"]      =  "0";
+    optionRequire   ["extend"]      =   false;
+    //if remove repeat
+    option          ["ROC"]      =  "F";
+    optionRequire   ["ROC"]      =   false;
     // Parse the command line.
     string option_name = "";
     string option_value = "";
@@ -241,6 +247,19 @@ void parseCommandLine(int argc,
                     printAndExit("cluster num must be within [1,20000]");
                 }
             }
+            else if (option_name == "-extend") {
+                option["extend"] = option_value;
+                if (atoi(option["extend"].c_str())<2||
+                    atoi(option["extend"].c_str())>20000) {
+                    printAndExit("extender must be within [1,20000]");
+                }
+            }
+            else if (option_name == "-roc") {
+                option["ROC"] = option_value;
+                if (option["ROC"]!="T"&&option["ROC"]!="F") {
+                    printAndExit("ROC value should be either T or F");
+                }           
+            }
             else {
                 cerr<<"unrecognized option "<<option_name<<"! skip"<<endl;
                 continue;
@@ -299,7 +318,7 @@ void printUsage()
     usage		+=	"    -b <BED file>              Regions of interest\n\n";
     usage		+=	"    -t <WIG file>              Tag file for Histone marks or other sources\n\n";
     //usage		+=	"    CAVEAT:WIG FILE SHOULD BE SORTED\n\n";
-    usage		+=	"    \nOptional Parameters:\n\n";
+    usage		+=	"    \n\nOptional Parameters:\n\n";
     usage		+=	"    -o <outputDIR>             Specify an output directory.\n\n";
     usage		+=	"    -bo <0,1>                  Order for background sequence\n\n";
     usage		+=	"    -br <region/genome>        Specify background sequence\n\n";
@@ -312,7 +331,11 @@ void printUsage()
     usage		+=	"    -rmrepeat <T/F>            Whether or not to remove repeat words(default T)\n\n";
     usage		+=	"    -cs <0-1 float>            Stringency of clustering(default 0.05)\n\n";
     usage		+=	"    -cn <1-500 integer>        maximal number of clusters(default 40)\n\n";
-    usage		+=	"    -mn <1-20000 integer>         maximal number of qualified motifs to be clustered(default 500)\n\n";
+    usage		+=	"    -mn <1-20000 integer>      maximal number of qualified motifs to be clustered(default 500)\n\n";
+    usage		+=	"    \n\nTesting Parameters:\n\n";
+    usage		+=	"    -roc <T/F>                 Plot roc(default F)\n\n";
+    usage		+=	"    -extend <1-20000 integer>  Extract extender(default 0)\n\n";
+
 	cerr<<usage<<endl;
 }
 

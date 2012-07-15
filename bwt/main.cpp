@@ -42,7 +42,8 @@ int main(int argc, char **argv)
     parseCommandLine(argc, argv);
     Edges = new Edge[ HASH_TABLE_SIZE ];
     Nodes = new Node[ MAX_LENGTH * 2 ];
-    genomeRegions *gR = new genomeRegions(0);
+
+    genomeRegions *gR = new genomeRegions(atoi(option["extend"].c_str()));
     
     //for test
     //test();
@@ -142,7 +143,7 @@ int main(int argc, char **argv)
                 thisMotif.initPWM();
                 thisMotif.initLociScore();
                 if (option["mode"]=="tag"){
-                    thisMotif.testMotifTag(*gR, outPutDir, false);
+                    thisMotif.testMotifTag(*gR, false);
                 }
                 thisMotif.sumOverallScore();
                 if (counter1==1) {
@@ -296,7 +297,7 @@ int main(int argc, char **argv)
                     clusters[j].calConscore(RegionSize);
                     if (option["mode"]=="tag"){
                         //update noise and tagscore
-                        clusters[j].testMotifTag(*gR,outPutDir,false);
+                        clusters[j].testMotifTag(*gR,false);
                     }
                     clusters[j].sumOverallScore();
                     sort(clusters.begin(),clusters.end(),compareMotif());
@@ -343,7 +344,7 @@ int main(int argc, char **argv)
         for (int j=0; j<clusters.size(); j++){
             clusters[j].trim(); 
             clusters[j].mergeLoci();
-            clusters[j].testMotifTag(*gR,outPutDir,true);
+            clusters[j].testMotifTag(*gR,true);
             clusters[j].calConscore(RegionSize);
             clusters[j].sumOverallScore();
         }
@@ -363,7 +364,7 @@ int main(int argc, char **argv)
             t4=t5;
         }
         
-
+        
         
         //write score info to cout
         cout<<setw(20)<<setiosflags(std::ios::left)<<"Motif"<<"\tP-value\tConscore\t";
