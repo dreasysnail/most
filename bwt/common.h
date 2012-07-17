@@ -41,7 +41,7 @@ void printUsage();
 extern int K;
 extern float DELTA;
 extern int MAXSHIFT;
-extern int MAXDISTANCE;
+extern float MAXDISTANCE;
 extern float MAXKLDIV;
 extern int MAXCLUSTERNUM;
 extern int MAXMOTIFNUM;
@@ -50,14 +50,15 @@ extern map<string,string> option;
 //
 const string MOSHVERSION = "Version 1.1 (2012-7-10)";
 
-
+#define QUALIFIED
+#define CLUSTERLOG
 
 //200M
-const long int MAX_LENGTH = 3e6;
+const long int MAX_LENGTH = int(3e6);
 const long int HASH_TABLE_SIZE = 2*MAX_LENGTH;  //A prime roughly 10% larger
 //tag counter parameters
-const int BINSPAN=10;     //range               
-const int offset=30;    //gap
+const int BINSPAN=6;     //range               
+const int offset=34;    //gap
 //must be power of 2
 
 
@@ -67,10 +68,10 @@ const int offset=30;    //gap
 
 
 //noise vs bipeak half to half
-const int NOISEWEIGHT = 10000;
-const int BIPEAKWEIGHT = 150;
-const int SYMMETRYWEIGHT = 200;
-const int PEAKRANGE = int(500/(BINSPAN+offset));
+const int NOISEWEIGHT = 20000;
+const int BIPEAKWEIGHT = 200;
+const int SYMMETRYWEIGHT = 400;
+const int PEAKRANGE = int(300/(BINSPAN+offset));
 
 
 //cut tag extend bound

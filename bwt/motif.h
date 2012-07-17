@@ -55,7 +55,7 @@ class Motif{
     void locateMotif(const char T[]);
     inline int mapLoci(int genomePos,const vector<int>& tag);
     void testMotifTag(genomeRegions &gR,bool ifDraw);
-    void drawDist(genomeRegions &gR);
+    void drawDist(genomeRegions& gR,ostream &distFile);
     void initBin(genomeRegions &gR);
     //order 0 order 1 
     void initProb(const genomeRegions& gR,int order);
@@ -90,7 +90,7 @@ class Motif{
     float sumTagScore();
     static int distance[4][15]; 
     //print info
-    void inline printMotif();  
+    void printMotif(ostream &s);  
     inline static string translate(int i);
     //cluster method
 
@@ -98,10 +98,10 @@ class Motif{
 
 class Cluster: public Motif{
 public:
-    Cluster(const Motif &m):Motif(m){index=-1;};
+    Cluster(const Motif &m):Motif(m){index=-1;sumPWM();};
     inline void addProb(const Motif& m,int prevSize);
     void concatenate(const Motif& m,int index ,int optimShift);
-    std::pair<int,int> editDistance(const Motif& m);
+    std::pair<float,int> editDistance(const Motif& m);
     float tagDistrDistance(const Motif& m);
     void calPWM(const Motif& m,int optimShift);
     inline void appendLoci(const Motif& m);
@@ -109,6 +109,7 @@ public:
     void mergeLoci();
     void trim();
     bool trivial(int pos);
+    bool oligo(int pos);
     void writeCLusterLog(ostream &s,const Motif& m);
     //sumpwm for trim
     vector<int> totalPWM;
@@ -124,7 +125,7 @@ public:
     void CountAndBipeak(){myScore=counts+LogOnePlusX(tagBiPeak[0]+tagBiPeak[1]+tagBiPeak[2]);}
     void CountAndIntensity(){myScore=counts+LogOnePlusX(signalIntensity[0]+signalIntensity[1]+signalIntensity[2]);}
     int counts;
-    int myScore;
+    float myScore;
     bool TP;
 };
 
@@ -194,6 +195,18 @@ inline bool Motif::isRepeat(){
     if (flag) {
         return true;
     }
+    if (option["rmrepeat"]=="2") {
+        int Ncounter=0;
+        for (int i=1; i<K; i++) {
+            if (query[i]!=query[0]) {
+                Ncounter++;
+            }
+            if (Ncounter>=2) {
+                return false;
+            }
+        }
+        return true;
+    }
     return false;
 }
 
@@ -252,25 +265,7 @@ inline string Motif::translate(int query){
     return tempS;
 }
 
-void inline Motif::printMotif(){
-    cout.precision(4);
-    cout<<std::setw(25)<<setiosflags(std::ios::left)<<query<<"\t"<<pvalue()<<"\t"<<score<<"\t";
-    for (int i=0; i<tagBiPeak.size(); i++) {
-        cout<<tagBiPeak[i]<<"\t";
-    }
-    for (int i=0; i<tagSymmetry.size(); i++) {
-        cout<<tagSymmetry[i]<<"\t";
-    }
-    if (option["FFT"]=="T") {
-        for (int i=0; i<tagNoise.size(); i++) {
-            cout<<tagNoise[i]<<"\t";
-        }
-    }
-    for (int i=0; i<signalIntensity.size(); i++) {
-        cout<<signalIntensity[i]<<"\t";
-    }
-    cout<<loci.size()<<endl;
-}
+
 //print pwm to stream
 ostream &operator<<( ostream &s, Motif &motif );
 //clustering

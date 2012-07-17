@@ -15,7 +15,7 @@ using namespace std;
 int K;
 float DELTA;
 int MAXSHIFT;
-int MAXDISTANCE;
+float MAXDISTANCE;
 float MAXKLDIV;
 int MAXCLUSTERNUM;
 int MAXMOTIFNUM;
@@ -68,7 +68,7 @@ void parseCommandLine(int argc,
     option          ["FFT"]      =  "T";
     optionRequire   ["FFT"]      =   false;
     //
-    option          ["trim"]      =  "30";
+    option          ["trim"]      =  "50";
     optionRequire   ["trim"]      =   false;
     //
     option          ["clusterlength"]      =  "20";
@@ -80,13 +80,13 @@ void parseCommandLine(int argc,
     option          ["pvalue"]      =  "0.05";
     optionRequire   ["pvalue"]      =   false;
     //if remove repeat
-    option          ["rmrepeat"]      =  "T";
+    option          ["rmrepeat"]      =  "1";
     optionRequire   ["rmrepeat"]      =   false;
     //
-    option          ["clusterStringency"]      =  "0";
+    option          ["clusterStringency"]      =  "0.2";
     optionRequire   ["clusterStringency"]      =   false;
     //
-    option          ["maxclusternum"]      =  "400";
+    option          ["maxclusternum"]      =  "10000000";
     optionRequire   ["maxclusternum"]      =   false;
     //
     option          ["maxmotifnum"]      =  "500";
@@ -222,8 +222,9 @@ void parseCommandLine(int argc,
             }
             else if (option_name == "-rmrepeat") {
                 option["rmrepeat"] = option_value;
-                if (option["rmrepeat"]!="T"&&option["rmrepeat"]!="F") {
-                    printAndExit("rmrepeat value should be either T or F");
+                if (atoi(option["order"].c_str())<0||
+                    atoi(option["order"].c_str())>2) {
+                    printAndExit("rmrepeat value should be either 0,1 or 2");;
                 }
             }
             else if (option_name == "-cs") {
@@ -293,9 +294,10 @@ void parseCommandLine(int argc,
     //changing parameters
     K = atoi(option["k"].c_str());
     float stringency = atof(option["clusterStringency"].c_str());
-    MAXSHIFT = int(K*(1-stringency)/3);
-    MAXDISTANCE = int(4*K*(1-stringency)/3);
-    MAXKLDIV = float(0.01+0.07*(1-stringency));
+    //for k=9   4-1   mismatch 4-1
+    MAXSHIFT = int(K*(1-stringency)/2.5+1);
+    MAXDISTANCE = K/3.0*(1-stringency)+1;
+    MAXKLDIV = float(0.001+0.004*(1-stringency));
     DELTA = NormalCDFInverse(1.0-atof(option["pvalue"].c_str()))+1.0;
     MAXMOTIFNUM = atoi(option["maxmotifnum"].c_str());
     MAXCLUSTERNUM = atoi(option["maxclusternum"].c_str());
@@ -318,21 +320,21 @@ void printUsage()
     usage		+=	"    -b <BED file>              Regions of interest\n\n";
     usage		+=	"    -t <WIG file>              Tag file for Histone marks or other sources\n\n";
     //usage		+=	"    CAVEAT:WIG FILE SHOULD BE SORTED\n\n";
-    usage		+=	"    \n\nOptional Parameters:\n\n";
+    usage		+=	"    Optional Parameters:\n\n";
     usage		+=	"    -o <outputDIR>             Specify an output directory.\n\n";
     usage		+=	"    -bo <0,1>                  Order for background sequence\n\n";
     usage		+=	"    -br <region/genome>        Specify background sequence\n\n";
     usage		+=	"    -locifile <T/F>            Whether or not loci file of each cluster should be exported\n\n";
     usage		+=	"    -regionfile <T/F>          Whether or not region file of each cluster should be exported\n\n";
     usage		+=	"    -fft <T/F>                 Whether or not to cast FFT on each bins(default T)\n\n";
-    usage		+=	"    -trim <10-100 integer>     Larger trimer means larger length of cluster\n\n";
+    usage		+=	"    -trim <10-100 integer>     Larger trimer means larger length of cluster(default 50)\n\n";
     usage		+=	"    -cl <4-30 integer>         maximal length of single cluster\n\n";
     usage		+=	"    -p(-pvalue) <0-1 float>    P-value for low occurence word filtering\n\n";
-    usage		+=	"    -rmrepeat <T/F>            Whether or not to remove repeat words(default T)\n\n";
+    usage		+=	"    -rmrepeat <0,1,2>            Whether or not to remove repeat words(default 1)\n\n";
     usage		+=	"    -cs <0-1 float>            Stringency of clustering(default 0.05)\n\n";
     usage		+=	"    -cn <1-500 integer>        maximal number of clusters(default 40)\n\n";
     usage		+=	"    -mn <1-20000 integer>      maximal number of qualified motifs to be clustered(default 500)\n\n";
-    usage		+=	"    \n\nTesting Parameters:\n\n";
+    usage		+=	"    Testing Parameters:\n\n";
     usage		+=	"    -roc <T/F>                 Plot roc(default F)\n\n";
     usage		+=	"    -extend <1-20000 integer>  Extract extender(default 0)\n\n";
 
@@ -959,14 +961,28 @@ void genomeRegions::printProb(){
 }
 
 void printProgress(const int i,const int total,const string& message){
+    static int innerCounter=0;
     if (i==0) {
         cerr<<message<<endl;
+        cerr<<"|0%_______________50%______________100%|\n";
+        
     }
-    if (i%(int((total)/50)+1)==0) {
-        cerr<<">";
+    if (total<40) {
+        cerr<<"=";
+        innerCounter++;
+        if (i==total-1) 
+            for (int j=innerCounter; j<40; j++) {
+                cerr<<"=";
+                innerCounter++;
+            }
     }
-    if (i==total-1) {
+    else if (i%(int((total)/40))==0) {
+        cerr<<"=";
+        innerCounter++;
+    }
+    if (innerCounter>=40) {
         cerr<<endl;
+        innerCounter=0;
     }
 }
 

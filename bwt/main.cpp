@@ -12,6 +12,9 @@
 #include <queue>
 #include <algorithm>
 #include <cctype>
+//for mkdir
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "common.h"
 #include "bwt.h"
 #include "motif.h"
@@ -56,7 +59,8 @@ int main(int argc, char **argv)
         
         string outPutDir(option["outdir"]); 
         system(("rm -rf "+outPutDir).c_str());
-        if (system(("mkdir "+outPutDir).c_str()) != 0)
+        
+        if (mkdir(outPutDir.c_str(),S_IRWXU|S_IRWXG|S_IRWXO)!= 0)
             printAndExit("cannot make directory");
         
         //parsing fasta and region
@@ -121,10 +125,9 @@ int main(int argc, char **argv)
         //pop minimal element    heap 
         priority_queue<Motif,vector<Motif>,compareMotif> MotifHeap;
         
-        const int K_4=pow1(4, K);
-
+        const int K_4=int(pow1(4, K));
         int counter1 = 0;
-        bool rmrepeat = (option["rmrepeat"]=="T");
+        bool rmrepeat = (option["rmrepeat"]=="0");
         for (int i = 0; i <(K_4); i++) {
             printProgress(i,K_4,"Qualify kmer from suffix tree:");
             Motif thisMotif(i);
@@ -194,13 +197,20 @@ int main(int argc, char **argv)
             printAndExit("too strict parameters!");
         }
         t3=clock();
+        
         cerr<<"count words:"<<double((t3-t2)/1e6)<<endl;
+        
+        delete [] Nodes;
+        delete [] Edges;
+        
     
         //clustering
    
         //cout<<qualifiedMotifs.size()<<qualifiedMotifs[0]<<qualifiedMotifs[1]<<endl;
         vector<Cluster> clusters;
-        
+        int exceedLengthCount = 0;
+        int inverseAlignedCount = 0;
+        int normalAligned = 0;
         int maxMotifSize=min(MAXMOTIFNUM, int(MotifHeap.size()));
         vector<Motif> qualifiedMotifs;
         qualifiedMotifs.reserve(MAXMOTIFNUM);
@@ -211,20 +221,32 @@ int main(int argc, char **argv)
         }
         //qualifiedMotifs[0].printMotif();
         reverse(qualifiedMotifs.begin(), qualifiedMotifs.end());
+#ifdef QUALIFIED
+        ofstream wordFile((option["outdir"]+"/qualified.log").c_str());
+        ofstream wordDist((option["outdir"]+"/qualified.dist").c_str());
+        for (int i=0; i<qualifiedMotifs.size(); i++) {
+            qualifiedMotifs[i].printMotif(wordFile);
+        }
+        for (int i=0; i<qualifiedMotifs.size(); i++) {
+            if (qualifiedMotifs[i].implicit()) {
+                continue;
+            }
+            qualifiedMotifs[i].drawDist(*gR, wordDist);
+        } 
+#endif
         //qualifiedMotifs[0].printMotif();
 
         Cluster temp0(qualifiedMotifs[0]);
         
         clusters.push_back(temp0);
         
-        cerr<<"clustering:"<<endl;
         for (int i=1; i<maxMotifSize; i++) { 
             float KLDiv=0;
-            printProgress(i,maxMotifSize,"clustering:");
+            printProgress(i-1,maxMotifSize-1,"clustering:");
             int bound = clusters.size();
             for (int j=0; j<bound; j++) {
                 bool aligned = false;
-                pair<int,int> dist_shift = clusters[j].editDistance(qualifiedMotifs[i]);
+                pair<float,int> dist_shift = clusters[j].editDistance(qualifiedMotifs[i]);
                 if (option["mode"]=="tag"){
                     KLDiv = clusters[j].tagDistrDistance(qualifiedMotifs[i]);
                     if (fabs(dist_shift.first)<=MAXDISTANCE&&KLDiv<=MAXKLDIV) {
@@ -239,6 +261,7 @@ int main(int argc, char **argv)
                 if (dist_shift.first<=0) {
                     if (aligned) {
                     //if highest mark is antisense and matched current cluster,discard
+                        inverseAlignedCount++;
                         goto nextMotif;
                     }
                     //try next cluster
@@ -248,28 +271,30 @@ int main(int argc, char **argv)
                     int queryLength = clusters[j].query.size();
                     //if cluster size exceed Max cluster size after this motif appended,discard
                     if (queryLength>=atoi(option["clusterlength"].c_str())&&(dist_shift.second<0||dist_shift.second+K>queryLength)) {
+                        exceedLengthCount++;
                         goto nextMotif;
                     }
                     //write cluster file
+#ifdef CLUSTERLOG
                     if (option["mode"]=="tag"){
-                        clusterFile<<i<<"\t";
+                        clusterFile<<i<<setw(8)<<"\t";
                         if (dist_shift.second>=0) {
                             for (int counter=0; counter<dist_shift.second; counter++) {
                                 clusterFile<<" ";
                             }
                         }
                         clusterFile<<" "<<qualifiedMotifs[i].query;
-                        clusterFile<<qualifiedMotifs[i].tagBiPeak<<qualifiedMotifs[i].tagSymmetry<<"dist"<<dist_shift.first<<"shift"<<dist_shift.second<<"\n";
-                        clusterFile<<j<<"\t";
+                        clusterFile<<qualifiedMotifs[i].tagBiPeak<<qualifiedMotifs[i].tagSymmetry<<clusters[j].signalIntensity<<"dist"<<dist_shift.first<<"shift"<<dist_shift.second<<"\n";
+                        clusterFile<<j<<setw(8)<<"\t";
                         if (dist_shift.second<0) {
                             for (int counter=0; counter<abs(dist_shift.second); counter++) {
                                 clusterFile<<" ";
                             }
                         }
-                        clusterFile<<" "<<clusters[j].query<<clusters[j].tagBiPeak<<clusters[j].tagSymmetry<<"KL div"<<KLDiv<<endl;
+                        clusterFile<<" "<<clusters[j].query<<clusters[j].tagBiPeak<<clusters[j].tagSymmetry<<clusters[j].signalIntensity<<"KL div"<<KLDiv<<endl;
                     } 
                     else {
-                        clusterFile<<i<<"\t";
+                        clusterFile<<i<<setw(8)<<"\t";
                         if (dist_shift.second>=0) {
                             for (int counter=0; counter<dist_shift.second; counter++) {
                                 clusterFile<<" ";
@@ -277,7 +302,7 @@ int main(int argc, char **argv)
                         }
                         clusterFile<<" "<<qualifiedMotifs[i].query;
                         clusterFile<<"\tdist"<<dist_shift.first<<"\tshift"<<dist_shift.second<<"\n";
-                        clusterFile<<j<<"\t";
+                        clusterFile<<j<<setw(8)<<"\t";
                         if (dist_shift.second<0) {
                             for (int counter=0; counter<abs(dist_shift.second); counter++) {
                                 clusterFile<<" ";
@@ -285,6 +310,8 @@ int main(int argc, char **argv)
                         }
                         clusterFile<<" "<<clusters[j].query<<endl;
                     }
+#endif               
+                    normalAligned++;
                     int prevSize = clusters[j].query.size();
                     clusters[j].concatenate(qualifiedMotifs[i],i,dist_shift.second);
                     //recalculate four attributes
@@ -303,11 +330,12 @@ int main(int argc, char **argv)
                     sort(clusters.begin(),clusters.end(),compareMotif());
                     goto nextMotif;
                 }
-                //for test: cluster system
-                else if (dist_shift.first>0&&dist_shift.first<=MAXDISTANCE&&KLDiv>MAXKLDIV){
+                //for test: cluster system not aligned by tag
+#ifdef CLUSTERLOG   
+                if (dist_shift.first>0&&dist_shift.first<=MAXDISTANCE&&KLDiv>MAXKLDIV){
                     if (option["mode"]=="tag"){
                         clusterFile<<"KLDIV not consistent:"<<"\n";
-                        clusterFile<<i<<"\t";
+                        clusterFile<<i<<setw(8)<<"\t";
                         if (dist_shift.second>=0) {
                             for (int counter=0; counter<dist_shift.second; counter++) {
                                 clusterFile<<" ";
@@ -315,7 +343,7 @@ int main(int argc, char **argv)
                         }
                         clusterFile<<" "<<qualifiedMotifs[i].query;
                         clusterFile<<qualifiedMotifs[i].tagBiPeak<<qualifiedMotifs[i].tagSymmetry<<"dist"<<dist_shift.first<<"shift"<<dist_shift.second<<"\n";
-                        clusterFile<<j<<"\t";
+                        clusterFile<<j<<setw(8)<<"\t";
                         if (dist_shift.second<0) {
                             for (int counter=0; counter<abs(dist_shift.second); counter++) {
                                 clusterFile<<" ";
@@ -324,15 +352,17 @@ int main(int argc, char **argv)
                         clusterFile<<" "<<clusters[j].query<<clusters[j].tagBiPeak<<clusters[j].tagSymmetry<<"KL div"<<KLDiv<<endl;
                     }
                 }
+#endif
                 else {
                     //test next cluster
                     continue;
                 }
 
             }
-            //if not aligned to any cluster
+            //if not aligned to any cluster, new cluster
             if (clusters.size()<MAXCLUSTERNUM){
                 qualifiedMotifs[i].index = -1;
+                clusterFile<<"+new cluster: "<<i<<" "<<qualifiedMotifs[i].query<<endl;
                 Cluster temp0(qualifiedMotifs[i]);
                 clusters.push_back(temp0);
             }
@@ -351,8 +381,7 @@ int main(int argc, char **argv)
         sort(clusters.begin(),clusters.end(),compareMotif());
         t4=clock();
         cerr<<"clustering:"<<double((t4-t3)/1e6)<<endl;
-        
-        
+        cerr<<"skipped:"<<exceedLengthCount<<"(exceedLength)+"<<inverseAlignedCount<<"(inverseAligned)="<<exceedLengthCount+inverseAlignedCount<<"\tAligned:"<<normalAligned<<"\tClusters:"<<clusters.size()<<"\ttotal:"<<exceedLengthCount+normalAligned+inverseAlignedCount+clusters.size()<<endl;
         if (option["writeloci"]=="T") {
             clock_t t5=clock();
             for (int j=0; j<clusters.size(); j++){
@@ -388,7 +417,7 @@ int main(int argc, char **argv)
         }
         cout<<"lociSize:"<<endl;
         for (int i=0; i<clusters.size(); i++){
-            clusters[i].printMotif();
+            clusters[i].printMotif(cout);
         }
         
         //write pwm file;
@@ -470,7 +499,7 @@ void test(){
     cerr<<tempBin<<endl;
     cerr<<testSymmety(tempBin)<<endl;
     */
-    cerr<<1/0.0<<endl;
+    cerr<<log2f(0.4)<<endl;
     
     assert(0==1);
 }

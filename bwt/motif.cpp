@@ -18,13 +18,11 @@ int Motif::distance[4][15] = {  {0,1,1,1,0,0,0,1,1,1,1,0,0,0,0},
                                 {1,0,1,1,0,1,1,0,0,1,0,1,0,0,0}, 
                                 {1,1,0,1,1,0,1,0,1,0,0,0,1,0,0},
                                 {1,1,1,0,1,1,0,1,0,0,0,0,0,1,0}};
-*/
-///*
 int Motif::distance[4][15] = {  {0,6,6,6,1,1,1,5,5,5,4,2,2,2,3},
                                 {6,0,6,6,1,5,5,1,1,5,2,4,2,2,3}, 
                                 {6,6,0,6,5,1,5,1,5,1,2,2,4,2,3},
                                 {6,6,6,0,5,5,1,5,1,1,2,2,2,4,3}};
-//*/
+*/
 /*
 vector<int> Motif::explainMotif(){
     //find all possible explanation(generalization)
@@ -176,9 +174,9 @@ void Motif::testMotifTag(genomeRegions &gR,bool ifDraw){
             }
             assymetry = testSymmety(tempVec);
         }
-        float biPeak=sumBin[SAMPLESIZE][t]*2;
+        float biPeak=fabsf(sumBin[SAMPLESIZE][t]*2);
         for (int i=1; i<PEAKRANGE; i++) {
-            float temp = sumBin[SAMPLESIZE-i][t]+sumBin[SAMPLESIZE+i][t];
+            float temp = fabsf(sumBin[SAMPLESIZE-i][t]+sumBin[SAMPLESIZE+i][t]);
             if (temp>biPeak) {
                 biPeak=temp;
             }
@@ -189,16 +187,16 @@ void Motif::testMotifTag(genomeRegions &gR,bool ifDraw){
         //cout<<tagName<<" "<<query<<" "<<sumMotif<<" "<<" "<<(2*BINSPAN+query.size()-1)<<" "<<sumMotif/counter/(2*BINSPAN+query.size()-1)<<endl;        
     }
     if (ifDraw) {
-        drawDist(gR);
+        string fileName = option["outdir"] + "/motif.dist";
+        ofstream distFile(fileName.c_str(),ios::app);
+        if (!distFile) {
+            printAndExit("Error! Fail to open distFile for writing!");
+        }
+        drawDist(gR,distFile);
     }
 }
 
-void Motif::drawDist(genomeRegions& gR){
-    string fileName = option["outdir"] + "/motif.dist";
-    ofstream distFile(fileName.c_str(),ios::app);
-    if (!distFile) {
-        printAndExit("Error! Fail to open distFile for writing!");
-    }
+void Motif::drawDist(genomeRegions& gR,ostream &distFile){    
     distFile<<">"<<query<<"_Tag_"<<gR.tagName<<"_Bipeak_"<<tagBiPeak<<"_symmetry_"<<tagSymmetry<<"\n";
     for (int l=0; l<2*SAMPLESIZE+1; l++) {
         int pos = (l-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE);
@@ -220,7 +218,7 @@ void Motif::initBin(genomeRegions &gR){
 //score methods
 
 void Motif::initProb(const genomeRegions& gR,int order){
-    float probBackgrd[4]={0.2,0.3,0.3,0.2};
+    float probBackgrd[4]={0.25,0.25,0.25,0.25};
     float tempProb = 0;
     if (order==0) {
         tempProb = 1;
@@ -311,8 +309,10 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
                 continue;
             }
             //for roc
-            if (sub_dist.second>extender/2-100&&sub_dist.second<extender/2+100) {
-                lociScores.back().TP=true;
+            if (option["ROC"]=="T"&&option["mode"]=="tag") {
+                if (sub_dist.second>extender-150&&sub_dist.second<extender+150) {
+                    lociScores.back().TP=true;
+                }
             }
             if (loci[i]<=RegionSize/2) {
                 strand = "+";
@@ -340,7 +340,7 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
             s<<"\n";
         }
         //for roc
-        if (option["ROC"]=="T") {
+        if (option["ROC"]=="T"&&option["mode"]=="tag") {
             // from big to small
             ofstream rocFile((option["outdir"]+"/roc.txt").c_str(),ios::app);
             for (int i=0; i<lociScores.size(); i++) {
@@ -445,20 +445,20 @@ void Motif::initLociScore(){
 //clustering methods
 
 
-pair<int,int> Cluster::editDistance(const Motif& m){
+pair<float,int> Cluster::editDistance(const Motif& m){
     Cluster &cluster = (*this);
-    int score = 1000;
+    float score = 1000;
     int optimShift = -100;
     int bound = MAXSHIFT+1+cluster.query.size()-K;
     for (int i=-MAXSHIFT; i<bound; i++) {
         //cout<<i<<cluster.query<<endl;
         //gap punish 2
-        int tempScore = 0;
+        float tempScore = 0;
         if (i<0) {
-            tempScore = -2*i;
+            tempScore = -0.5*i;
         }
         else if (i>=bound-MAXSHIFT) {
-            tempScore = 2*(MAXSHIFT-bound+i+1);
+            tempScore = 0.5*(MAXSHIFT-bound+i+1);
             //tempScore = K-cluster.query.size()+i;
         }
         for (int j=0; j<K; j++) {
@@ -466,7 +466,8 @@ pair<int,int> Cluster::editDistance(const Motif& m){
                 continue;
             }
             else {
-                tempScore += distance[alp2num(m.query[j])][alp2num(cluster.query[j+i])];
+                //tempScore += distance[alp2num(m.query[j])][alp2num(cluster.query[j+i])];
+                tempScore += 1-log2f(cluster.pwm[alp2num(m.query[j])][j+i]/float(cluster.totalPWM[j+i])+1);
             } 
         }
         if (tempScore<score) {
@@ -479,12 +480,12 @@ pair<int,int> Cluster::editDistance(const Motif& m){
     string anti(::antisense(m.query));
     for (int i=-MAXSHIFT; i<bound; i++) {
         //cout<<i<<cluster.query<<endl;
-        int tempScore = 0;
+        float tempScore = 0;
         if (i<0) {
-            tempScore = -2*i;
+            tempScore = -0.5*i;
         }
         else if (i>=bound-MAXSHIFT) {
-            tempScore = 2*(MAXSHIFT-bound+i+1);
+            tempScore = 0.5*(MAXSHIFT-bound+i+1);
             //tempScore = K-cluster.query.size()+i;
         }
         for (int j=0; j<K; j++) {
@@ -492,7 +493,8 @@ pair<int,int> Cluster::editDistance(const Motif& m){
                 continue;
             }
             else {
-                tempScore += distance[alp2num(anti[j])][alp2num(cluster.query[j+i])];
+                //tempScore += distance[alp2num(anti[j])][alp2num(cluster.query[j+i])];
+                tempScore += 1-log2f(cluster.pwm[alp2num(anti[j])][j+i]/float(cluster.totalPWM[j+i])+1);
             } 
         }
         if (tempScore<score) {
@@ -552,14 +554,14 @@ void Cluster::concatenate(const Motif& m,int index,int optimShift){
 }
 //calculate KL divergence: motif to cluster
 float Cluster::tagDistrDistance(const Motif& m){
-    //major distrib:cluster
+    //major distrib:cluster  3 tag's sum
     float temp = 0;
     for (int t=0; t<sumBin[0].size(); t++) {
         for (int l=0; l<SAMPLESIZE*2+1; l++) {
             temp += sumBin[l][t]*log10f((sumBin[l][t]+SMALLNUM)/(m.sumBin[l][t]+SMALLNUM));
         }
     }
-    return temp;
+    return temp/sumBin[0].size();
 }
 
 void Cluster::mergeLoci(){
@@ -585,10 +587,14 @@ void Cluster::trim(){
     int end = query.size()-1;
     int maxPWM = sumPWM();
     int trimMultiper = atoi(option["trim"].c_str());
-    while (trivial(start)||totalPWM[start]<maxPWM/trimMultiper) {
+    while (trivial(start)||
+           totalPWM[start]<maxPWM/trimMultiper||
+           ((totalPWM[start]<maxPWM*2/trimMultiper)&&oligo(start))) {
         start++;
     }
-    while (trivial(start)||totalPWM[end]<maxPWM/trimMultiper) {
+    while (trivial(end)||
+           totalPWM[end]<maxPWM/trimMultiper||
+           ((totalPWM[end]<maxPWM*2/trimMultiper)&&oligo(start))) {
         end--;
     }
     query = query.substr(start,end-start+1);
@@ -634,6 +640,15 @@ bool Cluster::trivial(int pos){
             return false;
     }
     return true;
+}
+bool Cluster::oligo(int pos){
+    //only one
+    for (int i=0; i<4; i++) {
+        assert(totalPWM[pos]!=0);
+        if (pwm[i][pos]==totalPWM[pos])
+            return true;
+    }
+    return false;
 }
 
 
@@ -691,7 +706,7 @@ void Cluster::calPWM(const Motif& m,int optimShift){
         }
         
     }
-
+    sumPWM();
     //    cout<<query<<endl;
 }
 
@@ -734,6 +749,25 @@ float Motif::sumTagScore(){
     return tempScore;
 }
 
+void Motif::printMotif(ostream &s){
+    s.precision(4);
+    s<<std::setw(25)<<setiosflags(std::ios::left)<<query<<"\t"<<pvalue()<<"\t"<<score<<"\t";
+    for (int i=0; i<tagBiPeak.size(); i++) {
+        s<<tagBiPeak[i]<<"\t";
+    }
+    for (int i=0; i<tagSymmetry.size(); i++) {
+        s<<tagSymmetry[i]<<"\t";
+    }
+    if (option["FFT"]=="T") {
+        for (int i=0; i<tagNoise.size(); i++) {
+            s<<tagNoise[i]<<"\t";
+        }
+    }
+    for (int i=0; i<signalIntensity.size(); i++) {
+        s<<signalIntensity[i]<<"\t";
+    }
+    s<<loci.size()<<endl;
+}
 
 ostream &operator<<( ostream &s, Motif &motif ){
     s<<">"<<motif.query<<"_Conscore_"<<motif.score;
