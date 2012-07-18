@@ -43,7 +43,7 @@ int Node::Leaf = 1;
 //
 
 // This is the concatenated seq
-char T[ MAX_LENGTH ];
+string T;
 int N;
 
 

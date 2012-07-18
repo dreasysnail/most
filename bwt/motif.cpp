@@ -301,6 +301,7 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
                 tempM.loci.clear();
                 tempM.loci.push_back(loci[i]);
                 tempM.testMotifTag(gR ,false);
+                //for test output
                 //for roc
                 lociScores.push_back(tempLociScore(tempM,lociScore[i]));
             }
@@ -314,6 +315,7 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
                     lociScores.back().TP=true;
                 }
             }
+            //
             if (loci[i]<=RegionSize/2) {
                 strand = "+";
                 chr = gR.segmentGenomePos[sub_dist.first].first;
@@ -331,14 +333,33 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
             }
             s<<chr<<"\t"<<startP<<"\t"<<endP<<"\t"<<strand<<"\t"<<lociScore[i]<<"\t";
             //put two
+            /*
             for (int i=0; i<tempM.tagBiPeak.size(); i++) {
                 s<<tempM.tagBiPeak[i]<<"\t";
             }
             for (int i=0; i<tempM.signalIntensity.size(); i++) {
                 s<<tempM.signalIntensity[i]<<"\t";
             }
+            */ 
             s<<"\n";
+            
         }
+        
+        
+#ifndef WRITELOCIDIST
+#define WRITELOCIDIST
+        if (option["mode"]=="tag") {
+            for (int i=0; i<loci.size(); i++) {
+                ofstream specLociFile((option["outdir"]+"/specloci.dist").c_str(),ios::app);
+                ostringstream ss;
+                ss<<i;
+                lociScores[i].query="loci No."+ss.str();
+                lociScores[i].drawDist(gR, specLociFile);
+            }
+        }
+#endif
+        
+        
         //for roc
         if (option["ROC"]=="T"&&option["mode"]=="tag") {
             // from big to small

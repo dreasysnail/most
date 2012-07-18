@@ -45,7 +45,9 @@ extern float MAXDISTANCE;
 extern float MAXKLDIV;
 extern int MAXCLUSTERNUM;
 extern int MAXMOTIFNUM;
+extern long int HASH_TABLE_SIZE;
 extern map<string,string> option;
+
 
 //
 const string MOSHVERSION = "Version 1.1 (2012-7-10)";
@@ -54,8 +56,8 @@ const string MOSHVERSION = "Version 1.1 (2012-7-10)";
 #define CLUSTERLOG
 
 //200M
-const long int MAX_LENGTH = int(3e6);
-const long int HASH_TABLE_SIZE = 2*MAX_LENGTH;  //A prime roughly 10% larger
+const long int MAX_LENGTH=int(3e6);
+//A prime roughly 10% larger
 //tag counter parameters
 const int BINSPAN=6;     //range               
 const int offset=34;    //gap
@@ -75,7 +77,7 @@ const int PEAKRANGE = int(300/(BINSPAN+offset));
 
 
 //cut tag extend bound
-const int EXTENDBOUND = (SAMPLESIZE+1)*BINSPAN+offset*SAMPLESIZE+1;
+const int EXTENDBOUND = (SAMPLESIZE+1)*BINSPAN+offset*(SAMPLESIZE+1);
 
 //FFT
 const float PI = 3.1416;
@@ -114,7 +116,7 @@ public:
     int extend;
     void getSeq(const string& outPutDir);
     void appendSeq(ostream &outFile,vector<genomeRegion>::iterator& currentGenomeRegion);
-    int appendReverseGenome(char* T);
+    int appendReverseGenome(string& T);
     void getTagBed(const string& thistag,const string& currentChr );    //get 0-1 sequence from bed file
     void appendTag(int a,int b,const string& chr,const string& thistag);
     void appendReverseTag();

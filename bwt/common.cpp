@@ -19,6 +19,8 @@ float MAXDISTANCE;
 float MAXKLDIV;
 int MAXCLUSTERNUM;
 int MAXMOTIFNUM;
+long int HASH_TABLE_SIZE;
+
 map<string,string> option;
 
 
@@ -103,7 +105,7 @@ void parseCommandLine(int argc,
     
     
     // Read the next option, and break if we're done.
-    if (argc==0) {
+    if (argc==1) {
         printUsage();
         exit(0);
     }
@@ -222,8 +224,8 @@ void parseCommandLine(int argc,
             }
             else if (option_name == "-rmrepeat") {
                 option["rmrepeat"] = option_value;
-                if (atoi(option["order"].c_str())<0||
-                    atoi(option["order"].c_str())>2) {
+                if (atoi(option["rmrepeat"].c_str())<0||
+                    atoi(option["rmrepeat"].c_str())>2) {
                     printAndExit("rmrepeat value should be either 0,1 or 2");;
                 }
             }
@@ -281,7 +283,7 @@ void parseCommandLine(int argc,
     //output commandlines:
     cerr<<"\nCommandline:";
     for (map<string, string>::iterator it=option.begin();it!=option.end();it++) {
-        cerr<<"(-"<<it->first<<" "<<it->second<<") ";
+        cerr<<"(--"<<it->first<<" "<<it->second<<") ";
     }
     cerr<<"\n";
     // verify required arguments .
@@ -692,7 +694,7 @@ void genomeRegions::appendSeq(ostream &outFile,vector<genomeRegion>::iterator& c
     return;
 }
 
-int genomeRegions::appendReverseGenome(char* T){
+int genomeRegions::appendReverseGenome(string& T){
     //extend segmentStartPos
     //cerr<<segmentStartPos.size()<<segmentCount+1<<endl;
     assert(segmentStartPos.size()==segmentCount+1);
@@ -708,20 +710,17 @@ int genomeRegions::appendReverseGenome(char* T){
         segmentGenomePos.push_back(segmentGenomePos[i]);
     } 
     vector<string>::iterator chrit;
-    long int offset=0;
-    string tempString("");
+    T.clear();
+    T.reserve(MAX_LENGTH);
     for (chrit=chromeNames.begin(); chrit!=chromeNames.end(); chrit++) {
-        tempString += regionSeqs[*chrit];
+        T += regionSeqs[*chrit];
         string tempS("");
         regionSeqs[*chrit].swap(tempS);
     }
-    tempString += antisense(tempString)+"#";
-    offset = tempString.size();
-    cerr<<"regionSize:"<<offset<<endl;
-    assert(offset<=MAX_LENGTH);
-    strcpy(T, tempString.c_str()); 
-    tempString.clear();
-    return offset;
+    T += antisense(T)+"#";
+    cerr<<"regionSize:"<<T.size()<<endl;
+    //assert(offset<=MAX_LENGTH);
+    return T.size();
 }
 
 
@@ -962,6 +961,9 @@ void genomeRegions::printProb(){
 
 void printProgress(const int i,const int total,const string& message){
     static int innerCounter=0;
+    if (i!=0&&innerCounter==0) {
+        return;
+    }
     if (i==0) {
         cerr<<message<<endl;
         cerr<<"|0%_______________50%______________100%|\n";
@@ -970,15 +972,16 @@ void printProgress(const int i,const int total,const string& message){
     if (total<40) {
         cerr<<"=";
         innerCounter++;
-        if (i==total-1) 
-            for (int j=innerCounter; j<40; j++) {
-                cerr<<"=";
-                innerCounter++;
-            }
     }
     else if (i%(int((total)/40))==0) {
         cerr<<"=";
         innerCounter++;
+    }
+    if (i==total-1&&innerCounter<40) { 
+        for (int j=innerCounter; j<40; j++) {
+            cerr<<"=";
+        }
+        innerCounter=40;
     }
     if (innerCounter>=40) {
         cerr<<endl;

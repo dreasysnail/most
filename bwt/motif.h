@@ -196,13 +196,13 @@ inline bool Motif::isRepeat(){
         return true;
     }
     if (option["rmrepeat"]=="2") {
-        int Ncounter=0;
+        char tempChar=query[0];
         for (int i=1; i<K; i++) {
-            if (query[i]!=query[0]) {
-                Ncounter++;
-            }
-            if (Ncounter>=2) {
+            if (tempChar!=query[0]&&query[i]!=tempChar&&query[i]!=query[0]) {
                 return false;
+            }
+            if (query[i]!=query[0]) {
+                tempChar=query[i];
             }
         }
         return true;

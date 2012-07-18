@@ -26,7 +26,7 @@ using namespace std;
 
 //global var's declarision
 
-extern char T[ MAX_LENGTH ];
+extern string T;
 extern int N;
 
 extern int RegionSize;
@@ -41,17 +41,15 @@ int main(int argc, char **argv)
 {
     clock_t tStart,t1,t2,t2_1,t3,t4,tEnd;
     tStart=clock();
-    cerr<<"START MOTIF FINDING"<<endl;
+
     parseCommandLine(argc, argv);
-    Edges = new Edge[ HASH_TABLE_SIZE ];
-    Nodes = new Node[ MAX_LENGTH * 2 ];
 
     genomeRegions *gR = new genomeRegions(atoi(option["extend"].c_str()));
     
     //for test
     //test();
 
-
+    cerr<<"START MOTIF FINDING"<<endl;
     
     Suffix active( 0, 0, -1 );  // The initial active prefix
     
@@ -108,10 +106,15 @@ int main(int argc, char **argv)
             }
         }
         cerr<<"RegionSize:"<<RegionSize<<endl;
-        assert(RegionSize<=MAX_LENGTH);
-        assert(RegionSize*2<=HASH_TABLE_SIZE);
+        //assert(RegionSize<=MAX_LENGTH);
+        //assert(RegionSize*2<=HASH_TABLE_SIZE);
         assert(gR->segmentStartPos.back()==RegionSize);
-        N = strlen(T) - 1;
+        
+        Edges = new Edge[long(RegionSize*2*1.6)];
+        Nodes = new Node[RegionSize*2+1];
+        HASH_TABLE_SIZE =long(RegionSize*2*1.6);
+        
+        N = T.size() - 1;
         
         for ( int i = 0 ; i <= N ; i++ )
             active.AddPrefix(i);
@@ -127,7 +130,7 @@ int main(int argc, char **argv)
         
         const int K_4=int(pow1(4, K));
         int counter1 = 0;
-        bool rmrepeat = (option["rmrepeat"]=="0");
+        bool rmrepeat = (option["rmrepeat"]!="0");
         for (int i = 0; i <(K_4); i++) {
             printProgress(i,K_4,"Qualify kmer from suffix tree:");
             Motif thisMotif(i);
@@ -499,7 +502,7 @@ void test(){
     cerr<<tempBin<<endl;
     cerr<<testSymmety(tempBin)<<endl;
     */
-    cerr<<log2f(0.4)<<endl;
+    cerr<<EXTENDBOUND<<endl;
     
     assert(0==1);
 }
