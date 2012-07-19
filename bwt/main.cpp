@@ -65,6 +65,11 @@ int main(int argc, char **argv)
         gR->readFasta(option["fastafile"]);
         gR->readBed(option["regionfile"]);
         gR->mergeOverlap();
+        // rm control peaks
+        if (option["control"]!="") {
+            cerr<<"control File（bedFormat）:"<<option["control"]<<endl;
+            gR->rmControlPeaks(option["control"]);
+        }
         gR->getSeq(outPutDir);
         //region-wide
         switch (option["bkgregion"][0]) {
@@ -82,6 +87,14 @@ int main(int argc, char **argv)
         RegionSize = gR->appendReverseGenome(T);
         t1=clock();
         cerr<<"Parsing Fasta:"<<double((t1-tStart)/1e6)<<endl;
+
+        
+        
+        
+        
+        
+        
+        
         // tag mode
         if (option["mode"]=="tag") {
 
@@ -335,7 +348,7 @@ int main(int argc, char **argv)
                 }
                 //for test: cluster system not aligned by tag
 #ifdef CLUSTERLOG   
-                if (dist_shift.first>0&&dist_shift.first<=MAXDISTANCE&&KLDiv>MAXKLDIV){
+                else if (dist_shift.first>0&&dist_shift.first<=MAXDISTANCE&&KLDiv>MAXKLDIV){
                     if (option["mode"]=="tag"){
                         clusterFile<<"KLDIV not consistent:"<<"\n";
                         clusterFile<<i<<setw(8)<<"\t";

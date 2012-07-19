@@ -92,6 +92,14 @@ struct genomeRegion {
     string chr;
 };
 
+struct Interval {
+    int Point;
+    //start or end
+    bool start;
+    string chr;
+    char tag;
+};
+
 class genomeRegions{
 public:
     
@@ -136,6 +144,9 @@ public:
     vector<int> segmentStartPos;
     //store actual pos of each segment in genome.
     vector<pair<string,int> > segmentGenomePos;
+    
+    void rmControlPeaks(const string& filename);
+    void callOverLaps(vector<Interval> &intervalLib);
    
 };
 
@@ -148,7 +159,13 @@ inline bool compareGenome(genomeRegion gr1, genomeRegion gr2)
     }
 	return (gr1.startP<gr2.startP);
 }
-
+inline bool compareInterval(Interval gr1, Interval gr2)
+{   
+    if (gr2.chr!=gr1.chr) {
+        return chrCompare(gr1.chr,gr2.chr);;
+    }
+	return (gr1.Point<gr2.Point);
+}
 
 inline void printAndExit(string errorInfo)
 {
@@ -268,7 +285,9 @@ inline float testSymmety(const vector<float> &fvec){
     normalization(rhs);
     return symKLDiv(lhs,rhs);
 }
-
+inline bool isOverlap(int as,int ae,int bs,int be) {
+    return !(as>be||bs>ae);
+}
 
 //numeric
 float calPhi(float x);

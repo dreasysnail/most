@@ -9,6 +9,7 @@
 #include "common.h"
 #include "motif.h"
 #include "FFT.h"
+#include <bitset>
 
 using namespace std;
 
@@ -99,6 +100,9 @@ void parseCommandLine(int argc,
     //if remove repeat
     option          ["ROC"]      =  "F";
     optionRequire   ["ROC"]      =   false;
+    //if remove control
+    option          ["control"]      =  "";
+    optionRequire   ["control"]      =   false;
     // Parse the command line.
     string option_name = "";
     string option_value = "";
@@ -158,6 +162,10 @@ void parseCommandLine(int argc,
             else if (option_name == "-t") {
                 option["tagfile"] = option_value;
                 optionRequire["tagfile"] = false;
+            } 
+            else if (option_name == "-c") {
+                option["control"] = option_value;
+                optionRequire["control"] = false;
             } 
             else if (option_name == "-o") {
                 option["outdir"] = option_value;
@@ -323,6 +331,7 @@ void printUsage()
     usage		+=	"    -t <WIG file>              Tag file for Histone marks or other sources\n\n";
     //usage		+=	"    CAVEAT:WIG FILE SHOULD BE SORTED\n\n";
     usage		+=	"    Optional Parameters:\n\n";
+     usage		+=	"    -c <BEG file>              Control file for ChIP-seq experiment\n\n";
     usage		+=	"    -o <outputDIR>             Specify an output directory.\n\n";
     usage		+=	"    -bo <0,1>                  Order for background sequence\n\n";
     usage		+=	"    -br <region/genome>        Specify background sequence\n\n";
@@ -627,6 +636,76 @@ bool genomeRegions::readFasta(const string &filename){
 }
 
 
+//rm control Peaks
+void genomeRegions::rmControlPeaks(const string& filename){
+    genomeRegions tempgR(0);
+    tempgR.chromeNames=chromeNames;
+    tempgR.readBed(filename);
+    
+    //sort(tempgR.genomes.begin(), tempgR.genomes.end(), compareGenome);
+    vector<Interval> intervalLib;
+    vector<genomeRegion>::iterator genomeit;
+    //origin
+    for (genomeit = genomes.begin(); genomeit!=genomes.end(); genomeit++) {
+        Interval tempS={genomeit->startP,true,genomeit->chr,'o'};
+        intervalLib.push_back(tempS);
+        Interval tempE={genomeit->endP,false,genomeit->chr,'o'};
+        intervalLib.push_back(tempE);
+    }
+    //control
+    for (genomeit = tempgR.genomes.begin(); genomeit!=tempgR.genomes.end(); genomeit++) {
+        Interval tempS={genomeit->startP,true,genomeit->chr,'c'};
+        intervalLib.push_back(tempS);
+        Interval tempE={genomeit->endP,false,genomeit->chr,'c'};
+        intervalLib.push_back(tempE);
+    }
+    callOverLaps(intervalLib);
+    return;
+
+}
+//mask region labeled "control"
+void genomeRegions::callOverLaps(vector<Interval> &intervalLib) {
+    sort(intervalLib.begin(), intervalLib.end(),compareInterval);
+    //can deal with overlapped control set and orginal set
+    assert(intervalLib.size()>1);
+    bool _originOpen=false;
+    bool _controlOpen=false;
+    int _currentS = 0;
+    //initiate chr
+    string _currentChr = intervalLib[0].chr;
+    vector<genomeRegion> masked_region;
+    for (int i=0; i<intervalLib.size(); i++) {
+        if (intervalLib[i].chr==_currentChr) {
+            if ((intervalLib[i].start&&intervalLib[i].tag=='c')||
+                (!intervalLib[i].start&&intervalLib[i].tag=='o')) {
+                if (_originOpen&&(!_controlOpen)) {
+                    //push back this segment
+                    genomeRegion tempG={_currentS,intervalLib[i].Point,_currentChr};
+                    masked_region.push_back(tempG);
+                }
+            }
+            else {
+                //update to new start
+                _currentS = intervalLib[i].Point;
+            }
+            //switch open accessibility
+            if (intervalLib[i].tag=='o') {
+                _originOpen=intervalLib[i].start;
+            }
+            if (intervalLib[i].tag=='c') {
+                _controlOpen=intervalLib[i].start;
+            }
+        }
+        else {
+            _currentChr=intervalLib[i].chr;
+            _originOpen=false;
+            _controlOpen=false;
+        }
+    }
+    genomes.swap(masked_region);
+}
+
+
 //for allchrom
 void genomeRegions::getSeq(const string& outPutDir){
     string fileName = outPutDir+"/allregions.fa";
@@ -654,7 +733,7 @@ void genomeRegions::appendSeq(ostream &outFile,vector<genomeRegion>::iterator& c
     int startCut=currentGenomeRegion->startP;
     int endCut=currentGenomeRegion->endP;
     string &currentChr=currentGenomeRegion->chr;
-    //cout<<currentChr<<" "<<startCut<<" "<<endCut<<" "<<rawGenome[currentChr].substr(startCut,endCut-startCut+1)<<endl;
+    cout<<currentChr<<" "<<startCut<<" "<<endCut<<endl;
     
     
     try {
