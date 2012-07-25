@@ -307,7 +307,7 @@ void parseCommandLine(int argc,
     //for k=9   4-1   mismatch 4-1
     MAXSHIFT = int(K*(1-stringency)/2.5+1);
     MAXDISTANCE = K/3.0*(1-stringency)+1;
-    MAXKLDIV = float(0.001+0.004*(1-stringency));
+    MAXKLDIV = float(0.003+0.006*(1-stringency));
     DELTA = NormalCDFInverse(1.0-atof(option["pvalue"].c_str()))+1.0;
     MAXMOTIFNUM = atoi(option["maxmotifnum"].c_str());
     MAXCLUSTERNUM = atoi(option["maxclusternum"].c_str());
@@ -680,8 +680,10 @@ void genomeRegions::callOverLaps(vector<Interval> &intervalLib) {
                 (!intervalLib[i].start&&intervalLib[i].tag=='o')) {
                 if (_originOpen&&(!_controlOpen)) {
                     //push back this segment
-                    genomeRegion tempG={_currentS,intervalLib[i].Point,_currentChr};
-                    masked_region.push_back(tempG);
+                    if (intervalLib[i].Point>_currentS+K) {
+                        genomeRegion tempG={_currentS,intervalLib[i].Point,_currentChr};
+                        masked_region.push_back(tempG);
+                    }
                 }
             }
             else {
@@ -703,6 +705,7 @@ void genomeRegions::callOverLaps(vector<Interval> &intervalLib) {
         }
     }
     genomes.swap(masked_region);
+    sort(genomes.begin(), genomes.end(),compareGenome);
 }
 
 
@@ -712,9 +715,10 @@ void genomeRegions::getSeq(const string& outPutDir){
     ofstream regionFile(fileName.c_str());
     vector<genomeRegion>::iterator it;
 
-    //chr1-chr19-chrX
+    //chr1-chr19-chrX   iterator changed in it
     for (it = genomes.begin(); it!=genomes.end();) {
         appendSeq(regionFile,it);
+        it++;
     }
     //clear memory
     sort(chromeNames.begin(), chromeNames.end(),chrCompare);
@@ -722,10 +726,8 @@ void genomeRegions::getSeq(const string& outPutDir){
         genomeLength[*it] = rawGenome[*it].size();
         string tempS("");
         rawGenome[*it].swap(tempS);
-    }
-    
-    //output is also pasted sorted chr1-chrn
-    
+    }    
+    //output is also pasted sorted chr1-chrn    
 }
 
 //appendSeq to 
@@ -733,13 +735,12 @@ void genomeRegions::appendSeq(ostream &outFile,vector<genomeRegion>::iterator& c
     int startCut=currentGenomeRegion->startP;
     int endCut=currentGenomeRegion->endP;
     string &currentChr=currentGenomeRegion->chr;
-    cout<<currentChr<<" "<<startCut<<" "<<endCut<<endl;
+    //cout<<currentChr<<" "<<startCut<<" "<<endCut<<endl;
     
     
     try {
-        if (endCut<=startCut+1) {
-            return;
-        }
+        assert(endCut>startCut+1);
+
         regionSeqs[currentChr] += rawGenome[currentChr].substr(startCut,endCut-startCut+1)+"#";
         //generate fasta
         if (option["writeregion"]=="T") {
@@ -762,8 +763,6 @@ void genomeRegions::appendSeq(ostream &outFile,vector<genomeRegion>::iterator& c
             segmentStartPos.push_back(genomeLength[currentChr]+1-startCut+segmentStartPos.back());
         }
         segmentGenomePos.push_back(make_pair(currentChr, startCut));
-        //next iter
-        currentGenomeRegion++;
     } catch (exception &e) {
         currentGenomeRegion = genomes.erase(currentGenomeRegion);
         cerr<<e.what()<<endl;

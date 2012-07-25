@@ -62,13 +62,10 @@ class Motif{
     void initPWM();
     //void calPWM(const vector<Motif>& allmotifs);
     void calConscore(int nSize){
-        float Thresh = motifProb*nSize;
-        if (loci.size()>Thresh*DELTA){
-            score = loci.size()/Thresh;
-        }
-        else {
+        if (loci.size()>motifProb*nSize*DELTA)
+            score = loci.size()/motifProb/nSize;
+        else 
             score = 0;
-        }
     };
     float pvalue(){
         return 1-calPhi(score-1);

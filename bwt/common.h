@@ -7,6 +7,7 @@
 //  History version
 //  Version 1.0 (2012-6-28) 
 //  Version 1.1 (2012-7-10)  Add FFT
+//  Version 1.2 (2012-7-10)  Add control roc...
 
 #ifndef bwt_common_h
 #define bwt_common_h
@@ -50,7 +51,7 @@ extern map<string,string> option;
 
 
 //
-const string MOSHVERSION = "Version 1.1 (2012-7-10)";
+const string MOSHVERSION = "Version 1.2 (2012-7-19)";
 
 #define QUALIFIED
 #define CLUSTERLOG
@@ -70,9 +71,9 @@ const int offset=34;    //gap
 
 
 //noise vs bipeak half to half
-const int NOISEWEIGHT = 20000;
+const int NOISEWEIGHT = 400;
 const int BIPEAKWEIGHT = 200;
-const int SYMMETRYWEIGHT = 400;
+const int SYMMETRYWEIGHT = 10;
 const int PEAKRANGE = int(300/(BINSPAN+offset));
 
 

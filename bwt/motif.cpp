@@ -157,7 +157,7 @@ void Motif::testMotifTag(genomeRegions &gR,bool ifDraw){
                 tempVec.push_back(sumBin[i][t]);
             }
             FFT tempFFT(tempVec);
-            tagNoise.push_back(tempFFT.denoise(int(SAMPLESIZE*5/8))*NOISEWEIGHT);
+            tagNoise.push_back(tempFFT.denoise(int(SAMPLESIZE*5/8))*NOISEWEIGHT*sqrt(loci.size()));
             /* smoothing */
             vector<float> tempBin;
             for (int i=0; i<SAMPLESIZE*2; i++) {
@@ -182,7 +182,7 @@ void Motif::testMotifTag(genomeRegions &gR,bool ifDraw){
             }
         }
         tagBiPeak.push_back(biPeak*BIPEAKWEIGHT);
-        tagSymmetry.push_back(assymetry*SYMMETRYWEIGHT);
+        tagSymmetry.push_back(assymetry*SYMMETRYWEIGHT*sqrt(loci.size()));
         //cout<<sumMotif<<sumBin<<endl;
         //cout<<tagName<<" "<<query<<" "<<sumMotif<<" "<<" "<<(2*BINSPAN+query.size()-1)<<" "<<sumMotif/counter/(2*BINSPAN+query.size()-1)<<endl;        
     }
@@ -311,7 +311,7 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
             }
             //for roc
             if (option["ROC"]=="T"&&option["mode"]=="tag") {
-                if (sub_dist.second>extender-150&&sub_dist.second<extender+150) {
+                if (sub_dist.second>extender-100&&sub_dist.second<extender+200) {
                     lociScores.back().TP=true;
                 }
             }
@@ -388,7 +388,7 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
                     }
                     tempIndex++;
                 }
-                rocFile<<scorethresh<<"\t"<<tempTP/float(TPFN)<<"\t"<<tempTP/float(tempTPFP)<<"\t"<<TN/float(TN+tempTPFP-tempTP)<<"\n";
+                rocFile<<scorethresh<<"\t"<<tempTP/float(TPFN)<<"\t"<<(tempTP+SMALLNUM)/(float(tempTPFP)+SMALLNUM)<<"\t"<<TN/float(TN+tempTPFP-tempTP)<<"\n";
             }
             // roc 2
             
@@ -582,8 +582,13 @@ float Cluster::tagDistrDistance(const Motif& m){
             temp += sumBin[l][t]*log10f((sumBin[l][t]+SMALLNUM)/(m.sumBin[l][t]+SMALLNUM));
         }
     }
-    return temp/sumBin[0].size();
+    //shrinker for small loci.size
+    float shrinker=300/(loci.size()+1)+300/(m.loci.size()+1)+1;
+    return temp/sumBin[0].size()/shrinker;
 }
+
+
+
 
 void Cluster::mergeLoci(){
     lociScore.clear();
@@ -592,7 +597,7 @@ void Cluster::mergeLoci(){
     lociScore.push_back(1);
     for (int i=1; i<loci.size(); i++) {
         assert(lociScore.size()==newloci.size());
-        if (loci[i]-newloci.back()<=query.size()) {
+        if (loci[i]-newloci.back()<=query.size()-K) {
             lociScore.back()++;
         }
         else {
@@ -657,7 +662,7 @@ bool Cluster::trivial(int pos){
     //all same
     for (int i=0; i<4; i++) {
         assert(totalPWM[pos]!=0);
-        if (pwm[i][pos]/float(totalPWM[pos])>0.28)
+        if (pwm[i][pos]/float(totalPWM[pos])>0.4)
             return false;
     }
     return true;

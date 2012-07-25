@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 
     cerr<<"START MOTIF FINDING"<<endl;
     
-    Suffix active( 0, 0, -1 );  // The initial active prefix
+    
     
     while (true) {
         
@@ -129,6 +129,7 @@ int main(int argc, char **argv)
         
         N = T.size() - 1;
         
+        Suffix active( 0, 0, -1 );  // The initial active prefix
         for ( int i = 0 ; i <= N ; i++ )
             active.AddPrefix(i);
         t2=clock();
