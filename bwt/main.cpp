@@ -257,6 +257,18 @@ int main(int argc, char **argv)
             qualifiedMotifs[i].drawDist(*gR, wordDist);
         } 
 #endif
+#ifdef QUALIFIEDPWM
+        //write pwm file;
+        ofstream pwmFile((option["outdir"]+"/qualified.pwm").c_str());
+        if (!pwmFile) {
+            printAndExit("Error! Fail to open pwmFile for writing!");
+        }
+        for (int i = 0; i<qualifiedMotifs.size(); i++) {
+            printProgress(i,qualifiedMotifs.size(), "Generate PWM file for qualified words");
+            pwmFile<<qualifiedMotifs[i];   
+        }
+        exit(0);
+#endif
 #ifdef CHIPEDPEAKDIST
         //output dist centered by chiped peaks
         ofstream CHIPDist((option["outdir"]+"/ChIPed_Peaks.dist").c_str());
