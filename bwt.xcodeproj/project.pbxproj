@@ -7,11 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		7804869415A25F70003562B5 /* FFT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7804869315A25F70003562B5 /* FFT.cpp */; };
-		7827F91015694A27003EAF34 /* motif.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7827F90F15694A27003EAF34 /* motif.cpp */; };
-		7863919E156297C200850697 /* bwt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7863919D156297C200850697 /* bwt.cpp */; };
-		786391A615629AF100850697 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 786391A515629AF100850697 /* main.cpp */; };
-		7885A7EB1568B83200C5DE99 /* common.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7885A7EA1568B83200C5DE99 /* common.cpp */; };
+		782E7B7B15E49BC200161BAD /* bwt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 782E7B7215E49BC200161BAD /* bwt.cpp */; };
+		782E7B7C15E49BC200161BAD /* common.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 782E7B7415E49BC200161BAD /* common.cpp */; };
+		782E7B7D15E49BC200161BAD /* FFT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 782E7B7615E49BC200161BAD /* FFT.cpp */; };
+		782E7B7E15E49BC200161BAD /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 782E7B7815E49BC200161BAD /* main.cpp */; };
+		782E7B7F15E49BC200161BAD /* motif.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 782E7B7915E49BC200161BAD /* motif.cpp */; };
 		A536A4D8143AAB5100A4F152 /* bwt.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = A536A4D7143AAB5100A4F152 /* bwt.1 */; };
 /* End PBXBuildFile section */
 
@@ -29,15 +29,15 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		7804869315A25F70003562B5 /* FFT.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = FFT.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		7804869615A25F7B003562B5 /* FFT.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = FFT.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		7827F90F15694A27003EAF34 /* motif.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = motif.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		7827F91215694A33003EAF34 /* motif.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = motif.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		7863919D156297C200850697 /* bwt.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = bwt.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		786391A0156298C200850697 /* bwt.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = bwt.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		786391A515629AF100850697 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = main.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		7885A7EA1568B83200C5DE99 /* common.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = common.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		7885A7ED1568B84500C5DE99 /* common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = common.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		782E7B7215E49BC200161BAD /* bwt.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = bwt.cpp; sourceTree = "<group>"; };
+		782E7B7315E49BC200161BAD /* bwt.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bwt.h; sourceTree = "<group>"; };
+		782E7B7415E49BC200161BAD /* common.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = common.cpp; sourceTree = "<group>"; };
+		782E7B7515E49BC200161BAD /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
+		782E7B7615E49BC200161BAD /* FFT.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FFT.cpp; sourceTree = "<group>"; };
+		782E7B7715E49BC200161BAD /* FFT.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FFT.h; sourceTree = "<group>"; };
+		782E7B7815E49BC200161BAD /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		782E7B7915E49BC200161BAD /* motif.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = motif.cpp; sourceTree = "<group>"; };
+		782E7B7A15E49BC200161BAD /* motif.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = motif.h; sourceTree = "<group>"; };
 		7885A7FE1568E86200C5DE99 /* temp.bed */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = temp.bed; sourceTree = "<group>"; };
 		7885A7FF1568E86200C5DE99 /* temp.fa */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = temp.fa; sourceTree = "<group>"; };
 		78ACBF771574A613003217D6 /* temp.wig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = temp.wig; sourceTree = "<group>"; };
@@ -75,19 +75,19 @@
 		A536A4D4143AAB5100A4F152 /* bwt */ = {
 			isa = PBXGroup;
 			children = (
-				7863919D156297C200850697 /* bwt.cpp */,
-				7885A7EA1568B83200C5DE99 /* common.cpp */,
-				7885A7ED1568B84500C5DE99 /* common.h */,
-				7827F90F15694A27003EAF34 /* motif.cpp */,
-				7827F91215694A33003EAF34 /* motif.h */,
-				786391A0156298C200850697 /* bwt.h */,
-				7804869315A25F70003562B5 /* FFT.cpp */,
-				7804869615A25F7B003562B5 /* FFT.h */,
+				782E7B7215E49BC200161BAD /* bwt.cpp */,
+				782E7B7315E49BC200161BAD /* bwt.h */,
+				782E7B7415E49BC200161BAD /* common.cpp */,
+				782E7B7515E49BC200161BAD /* common.h */,
+				782E7B7615E49BC200161BAD /* FFT.cpp */,
+				782E7B7715E49BC200161BAD /* FFT.h */,
+				782E7B7815E49BC200161BAD /* main.cpp */,
+				782E7B7915E49BC200161BAD /* motif.cpp */,
+				782E7B7A15E49BC200161BAD /* motif.h */,
 				A536A4D7143AAB5100A4F152 /* bwt.1 */,
 				7885A7FE1568E86200C5DE99 /* temp.bed */,
 				78ACBF771574A613003217D6 /* temp.wig */,
 				7885A7FF1568E86200C5DE99 /* temp.fa */,
-				786391A515629AF100850697 /* main.cpp */,
 			);
 			path = bwt;
 			sourceTree = "<group>";
@@ -142,11 +142,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7863919E156297C200850697 /* bwt.cpp in Sources */,
-				786391A615629AF100850697 /* main.cpp in Sources */,
-				7885A7EB1568B83200C5DE99 /* common.cpp in Sources */,
-				7827F91015694A27003EAF34 /* motif.cpp in Sources */,
-				7804869415A25F70003562B5 /* FFT.cpp in Sources */,
+				782E7B7B15E49BC200161BAD /* bwt.cpp in Sources */,
+				782E7B7C15E49BC200161BAD /* common.cpp in Sources */,
+				782E7B7D15E49BC200161BAD /* FFT.cpp in Sources */,
+				782E7B7E15E49BC200161BAD /* main.cpp in Sources */,
+				782E7B7F15E49BC200161BAD /* motif.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

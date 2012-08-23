@@ -297,20 +297,19 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
     try {
         for (int i=0; i<loci.size(); i++) {
             Motif tempM(1);
+            tempM.loci.clear();
+            tempM.loci.push_back(loci[i]);
             if (option["mode"]=="tag") {
-                tempM.loci.clear();
-                tempM.loci.push_back(loci[i]);
-                tempM.testMotifTag(gR ,false);
-                //for test output
-                //for roc
-                lociScores.push_back(tempLociScore(tempM,lociScore[i]));
+                tempM.testMotifTag(gR ,false);  
             }
+            //for roc
+            lociScores.push_back(tempLociScore(tempM,lociScore[i]));
             sub_dist = locateSubscript(gR.segmentStartPos, gR.segmentStartPos.begin(), gR.segmentStartPos.end(), loci[i]);
             if (sub_dist.first==-1) {
                 continue;
             }
             //for roc
-            if (option["ROC"]=="T"&&option["mode"]=="tag") {
+            if (option["ROC"]=="T") {
                 if (sub_dist.second>extender-100&&sub_dist.second<extender+200) {
                     lociScores.back().TP=true;
                 }
@@ -345,7 +344,7 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
             
         }
         
-        
+/*        
 #ifndef WRITELOCIDIST
 #define WRITELOCIDIST
         if (option["mode"]=="tag") {
@@ -358,10 +357,10 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
             }
         }
 #endif
-        
+*/        
         
         //for roc
-        if (option["ROC"]=="T"&&option["mode"]=="tag") {
+        if (option["ROC"]=="T") {
             // from big to small
             ofstream rocFile((option["outdir"]+"/roc.txt").c_str(),ios::app);
             for (int i=0; i<lociScores.size(); i++) {
@@ -372,7 +371,7 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
             int tempTP=0;
             int tempTPFP=0;
             int TPFN=gR.segmentCount;
-            int TN=gR.segmentCount*(extender/K); 
+            int TN=gR.segmentCount*5; 
             rocFile<<"only count"<<"\n";
             rocFile<<"thresh\tsensitivity\tprecision\tspecificity\n";
             for (int scorethresh=int(lociScores[0].myScore+1); scorethresh>=int(lociScores.back().myScore-1); scorethresh--) {
@@ -390,61 +389,64 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
                 }
                 rocFile<<scorethresh<<"\t"<<tempTP/float(TPFN)<<"\t"<<(tempTP+SMALLNUM)/(float(tempTPFP)+SMALLNUM)<<"\t"<<TN/float(TN+tempTPFP-tempTP)<<"\n";
             }
-            // roc 2
             
-            for (int i=0; i<lociScores.size(); i++) {
-                lociScores[i].CountAndBipeak();
-            }
-            sort(lociScores.begin(), lociScores.end(), compareLoci());
-            tempIndex=0;
-            tempTP=0;
-            tempTPFP=0;
-            rocFile<<"count and bipeak"<<"\n";
-            rocFile<<"thresh\tsensitivity\tprecision\tspecificity\n";
-            for (int scorethresh=int(lociScores[0].myScore+1); scorethresh>=int(lociScores.back().myScore-1); scorethresh--) {
-                while (lociScores[tempIndex].myScore>(scorethresh-1)) {
-                    if (tempIndex>=lociScores.size()) {
-                        break;
-                    }   
-                    tempTPFP++;
-                    
-                    assert(lociScores[tempIndex].loci.size()==1);
-                    if (lociScores[tempIndex].TP) {
-                        tempTP++;
-                    }
-                    tempIndex++;
+            if (option["mode"]=="tag") {
+                // roc 2
+                for (int i=0; i<lociScores.size(); i++) {
+                    lociScores[i].CountAndBipeak();
                 }
-                rocFile<<scorethresh<<"\t"<<tempTP/float(TPFN)<<"\t"<<tempTP/float(tempTPFP)<<"\t"<<TN/float(TN+tempTPFP-tempTP)<<"\n";
-            }
-
-            
-            // roc 3
-            
-            for (int i=0; i<lociScores.size(); i++) {
-                lociScores[i].CountAndIntensity();
-            }
-            sort(lociScores.begin(), lociScores.end(), compareLoci());
-            tempIndex=0;
-            tempTP=0;
-            tempTPFP=0;
-            rocFile<<"count and intensity"<<"\n";
-            rocFile<<"thresh\tsensitivity\tprecision\tspecificity\n";
-            for (int scorethresh=int(lociScores[0].myScore+1); scorethresh>=int(lociScores.back().myScore-1); scorethresh--) {
-                while (lociScores[tempIndex].myScore>(scorethresh-1)) {
-                    if (tempIndex>=lociScores.size()) {
-                        break;
-                    }   
-                    tempTPFP++;
-                    
-                    assert(lociScores[tempIndex].loci.size()==1);
-                    if (lociScores[tempIndex].TP) {
-                        tempTP++;
+                sort(lociScores.begin(), lociScores.end(), compareLoci());
+                tempIndex=0;
+                tempTP=0;
+                tempTPFP=0;
+                rocFile<<"count and bipeak"<<"\n";
+                rocFile<<"thresh\tsensitivity\tprecision\tspecificity\n";
+                for (int scorethresh=int(lociScores[0].myScore+1); scorethresh>=int(lociScores.back().myScore-1); scorethresh--) {
+                    while (lociScores[tempIndex].myScore>(scorethresh-1)) {
+                        if (tempIndex>=lociScores.size()) {
+                            break;
+                        }   
+                        tempTPFP++;
+                        
+                        assert(lociScores[tempIndex].loci.size()==1);
+                        if (lociScores[tempIndex].TP) {
+                            tempTP++;
+                        }
+                        tempIndex++;
                     }
-                    tempIndex++;
+                    rocFile<<scorethresh<<"\t"<<tempTP/float(TPFN)<<"\t"<<tempTP/float(tempTPFP)<<"\t"<<TN/float(TN+tempTPFP-tempTP)<<"\n";
                 }
-                rocFile<<scorethresh<<"\t"<<tempTP/float(TPFN)<<"\t"<<tempTP/float(tempTPFP)<<"\t"<<TN/float(TN+tempTPFP-tempTP)<<"\n";
-            }
+                
+                
+                // roc 3
+                
+                for (int i=0; i<lociScores.size(); i++) {
+                    lociScores[i].CountAndIntensity();
+                }
+                sort(lociScores.begin(), lociScores.end(), compareLoci());
+                tempIndex=0;
+                tempTP=0;
+                tempTPFP=0;
+                rocFile<<"count and intensity"<<"\n";
+                rocFile<<"thresh\tsensitivity\tprecision\tspecificity\n";
+                for (int scorethresh=int(lociScores[0].myScore+1); scorethresh>=int(lociScores.back().myScore-1); scorethresh--) {
+                    while (lociScores[tempIndex].myScore>(scorethresh-1)) {
+                        if (tempIndex>=lociScores.size()) {
+                            break;
+                        }   
+                        tempTPFP++;
+                        
+                        assert(lociScores[tempIndex].loci.size()==1);
+                        if (lociScores[tempIndex].TP) {
+                            tempTP++;
+                        }
+                        tempIndex++;
+                    }
+                    rocFile<<scorethresh<<"\t"<<tempTP/float(TPFN)<<"\t"<<tempTP/float(tempTPFP)<<"\t"<<TN/float(TN+tempTPFP-tempTP)<<"\n";
+                }
+                
 
+            }
             option["ROC"]="F";
         }
     } catch (const exception &e) {
@@ -583,7 +585,7 @@ float Cluster::tagDistrDistance(const Motif& m){
         }
     }
     //shrinker for small loci.size
-    float shrinker=300/(loci.size()+1)+300/(m.loci.size()+1)+1;
+    float shrinker=600/(loci.size()+1)+600/(m.loci.size()+1)+1;
     return temp/sumBin[0].size()/shrinker;
 }
 
@@ -661,6 +663,7 @@ bool Cluster::trivial(int pos){
     */
     //all same
     for (int i=0; i<4; i++) {
+        //cerr<<*this<<endl<<PEUSUDOCOUNT<<endl;
         assert(totalPWM[pos]!=0);
         if (pwm[i][pos]/float(totalPWM[pos])>0.4)
             return false;
@@ -809,7 +812,7 @@ ostream &operator<<( ostream &s, Motif &motif ){
     s<<"\n";
     for (int i=0; i<4; i++) {
         for (int j=0; j<motif.pwm[i].size(); j++) {
-            s<<motif.pwm[i][j]<<'\t';
+            s<<motif.pwm[i][j]/float(motif.pwm[0][j]+motif.pwm[1][j]+motif.pwm[2][j]+motif.pwm[3][j])<<'\t';
         }
         s<<endl;
     }

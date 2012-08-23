@@ -34,6 +34,8 @@ using std::endl;
 using std::ostream;
 using std::pair;
 #define SAMPLESIZE 32
+//don't write locidist
+//#define WRITELOCIDIST
 
 void parseCommandLine(int argc,char** argv);
 void printUsage();
@@ -47,6 +49,7 @@ extern float MAXKLDIV;
 extern int MAXCLUSTERNUM;
 extern int MAXMOTIFNUM;
 extern long int HASH_TABLE_SIZE;
+extern int PEUSUDOCOUNT;
 extern map<string,string> option;
 
 
@@ -55,6 +58,7 @@ const string MOSHVERSION = "Version 1.2 (2012-7-19)";
 
 #define QUALIFIED
 #define CLUSTERLOG
+#define CHIPEDPEAKDIST
 
 //200M
 const long int MAX_LENGTH=int(3e6);
@@ -140,6 +144,7 @@ public:
     bool catenateTags();
     
     bool readFasta(const string &filename);
+    bool readRegionFasta(const string &filename);
     int segmentCount;
     //store subscript in genometag for starting pos of segment
     vector<int> segmentStartPos;

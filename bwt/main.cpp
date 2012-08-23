@@ -62,15 +62,21 @@ int main(int argc, char **argv)
             printAndExit("cannot make directory");
         
         //parsing fasta and region
-        gR->readFasta(option["fastafile"]);
-        gR->readBed(option["regionfile"]);
-        gR->mergeOverlap();
-        // rm control peaks
-        if (option["control"]!="") {
-            cerr<<"control File（bedFormat）:"<<option["control"]<<endl;
-            gR->rmControlPeaks(option["control"]);
+        if (option["regionfastafile"]=="") {
+            gR->readFasta(option["fastafile"]);
+            gR->readBed(option["regionfile"]);
+            gR->mergeOverlap();
+            // rm control peaks
+            if (option["control"]!="") {
+                cerr<<"control File（bedFormat）:"<<option["control"]<<endl;
+                gR->rmControlPeaks(option["control"]);
+            }
+            gR->getSeq(outPutDir);
         }
-        gR->getSeq(outPutDir);
+        else {
+            gR->readRegionFasta(option["regionfastafile"]);
+        }
+        
         //region-wide
         switch (option["bkgregion"][0]) {
             case 'r':
@@ -250,6 +256,17 @@ int main(int argc, char **argv)
             }
             qualifiedMotifs[i].drawDist(*gR, wordDist);
         } 
+#endif
+#ifdef CHIPEDPEAKDIST
+        //output dist centered by chiped peaks
+        ofstream CHIPDist((option["outdir"]+"/ChIPed_Peaks.dist").c_str());
+        Motif chipPeaks(1);
+        chipPeaks.loci.clear();
+        for (int i=0; i<gR->segmentStartPos.size()-1 ;i++) {
+            chipPeaks.loci.push_back(gR->segmentStartPos[i]+50);
+        }
+        chipPeaks.testMotifTag(*gR, false);
+        chipPeaks.drawDist(*gR, CHIPDist);
 #endif
         //qualifiedMotifs[0].printMotif();
 
@@ -503,9 +520,10 @@ void test(){
     }
     cerr<<endl;
      */
-    /*
+    
     float fvec[65]={1.37328e-05,6.53941e-06,1.30788e-05,1.30788e-05,0.00022234,0.000268116,0.000251113,0.000245228,0.000288061,0.000306208,0.00027956,0.000291331,0.000235419,0.000249805,0.00024719,0.000232476,0.000251113,0.000255691,0.000256835,0.000305554,0.000314873,0.000518085,0.000557975,0.000603261,0.000775574,0.000794211,0.000812685,0.000797645,0.000743694,0.000814156,0.00076413,0.000725221,0.000744675,0.000657865,0.000679935,0.00073176,0.000633669,0.00060604,0.000524951,0.000410675,0.000354109,0.000292639,0.000260759,0.000248988,0.000327461,0.000362283,0.000376016,0.000482608,0.000475415,0.00044517,0.000505823,0.000432255,0.000471164,0.000398904,0.000324845,0.000314709,0.000279723,0.000241141,0.000207626,0.000196182,0.000188825,0.000121143,0.000122123,8.33775e-05,4.31601e-05};
-    vector<float> tempVec(fvec,fvec+64);
+    vector<float> tempVec(fvec,fvec+4);
+    /*
     FFT tempFFT(tempVec);
     cerr<<(tempFFT.denoise(int(SAMPLESIZE*5/8))*NOISEWEIGHT)<<endl;
     vector<float> tempBin;
@@ -516,7 +534,10 @@ void test(){
     cerr<<tempBin<<endl;
     cerr<<testSymmety(tempBin)<<endl;
     */
-    cerr<<EXTENDBOUND<<endl;
+    for (vector<float>::iterator i=tempVec.begin();i!=tempVec.end();) {
+        cerr<<*i<<endl;
+        i++;
+    }
     
     assert(0==1);
 }

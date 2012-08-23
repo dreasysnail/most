@@ -21,6 +21,7 @@ float MAXKLDIV;
 int MAXCLUSTERNUM;
 int MAXMOTIFNUM;
 long int HASH_TABLE_SIZE;
+int PEUSUDOCOUNT;
 
 map<string,string> option;
 
@@ -43,6 +44,9 @@ void parseCommandLine(int argc,
     //
     option          ["fastafile"]   =   "";
     optionRequire   ["fastafile"]   =   true;
+    //
+    option          ["regionfastafile"]   =   "";
+    optionRequire   ["regionfastafile"]   =   false;
     //
     option          ["regionfile"]  =   "";
     optionRequire   ["regionfile"]  =   true;
@@ -103,6 +107,9 @@ void parseCommandLine(int argc,
     //if remove control
     option          ["control"]      =  "";
     optionRequire   ["control"]      =   false;
+    //if remove control
+    option          ["peusudo"]      =  "1";
+    optionRequire   ["peusudo"]      =   false;
     // Parse the command line.
     string option_name = "";
     string option_value = "";
@@ -154,6 +161,10 @@ void parseCommandLine(int argc,
             else if (option_name == "-f") {
                 option["fastafile"] = option_value;
                 optionRequire["fastafile"] = false;
+            } 
+            else if (option_name == "-rf") {
+                option["regionfastafile"] = option_value;
+                optionRequire["regionfastafile"] = false;
             } 
             else if (option_name == "-r") {
                 option["regionfile"] = option_value;
@@ -271,9 +282,15 @@ void parseCommandLine(int argc,
                     printAndExit("ROC value should be either T or F");
                 }           
             }
+            else if (option_name == "-ps") {
+                option["peusudo"] = option_value;
+                if (atoi(option["peusudo"].c_str())<0||
+                    atoi(option["peusudo"].c_str())>200) {
+                    printAndExit("Peusudo count must be within [0,200]");
+                }          
+            }
             else {
                 cerr<<"unrecognized option "<<option_name<<"! skip"<<endl;
-                continue;
             } 
             
             //update
@@ -295,6 +312,11 @@ void parseCommandLine(int argc,
     }
     cerr<<"\n";
     // verify required arguments .
+    if (option["regionfastafile"]!=""&&option["mode"]=="tag") {
+        option["mode"]="normal";
+        cerr<<"WARNING:Automatically choosing normal mode when -rf is specified"<<"\n";
+    }
+    
     for (map<string, bool>::iterator it=optionRequire.begin();it!=optionRequire.end();it++) {
         if (it->second) {
             cerr<<"FATAL:"<<"option "<<it->first<<" need to be specified in command line!"<<endl;
@@ -302,15 +324,19 @@ void parseCommandLine(int argc,
         }
     }
     //changing parameters
+    
+    
+    
     K = atoi(option["k"].c_str());
     float stringency = atof(option["clusterStringency"].c_str());
     //for k=9   4-1   mismatch 4-1
     MAXSHIFT = int(K*(1-stringency)/2.5+1);
     MAXDISTANCE = K/3.0*(1-stringency)+1;
-    MAXKLDIV = float(0.003+0.006*(1-stringency));
+    MAXKLDIV = float(0.001+0.004*(1-stringency));
     DELTA = NormalCDFInverse(1.0-atof(option["pvalue"].c_str()))+1.0;
     MAXMOTIFNUM = atoi(option["maxmotifnum"].c_str());
     MAXCLUSTERNUM = atoi(option["maxclusternum"].c_str());
+    PEUSUDOCOUNT = atoi(option["peusudo"].c_str());
     cerr<<endl;
     
 }
@@ -327,6 +353,7 @@ void printUsage()
 	usage		+=	"    Required Parameters:\n\n";
 	usage		+=	"    -m <normal/tag/help>       Runing mode:tagfile should be specified if tag mode is selected\n\n";
 	usage		+=	"    -f <DNA sequence file>     Whole genome DNA sequences\n\n";
+    usage		+=	"    -rf <DNA sequence file>    Regional DNA sequences(using normal mode)\n\n";
     usage		+=	"    -b <BED file>              Regions of interest\n\n";
     usage		+=	"    -t <WIG file>              Tag file for Histone marks or other sources\n\n";
     //usage		+=	"    CAVEAT:WIG FILE SHOULD BE SORTED\n\n";
@@ -348,7 +375,7 @@ void printUsage()
     usage		+=	"    Testing Parameters:\n\n";
     usage		+=	"    -roc <T/F>                 Plot roc(default F)\n\n";
     usage		+=	"    -extend <1-20000 integer>  Extract extender(default 0)\n\n";
-
+    usage		+=	"    -ps <0-200 integer>        Peusudo count added on PFM\n\n";
 	cerr<<usage<<endl;
 }
 
@@ -635,6 +662,32 @@ bool genomeRegions::readFasta(const string &filename){
 	return true;
 }
 
+bool genomeRegions::readRegionFasta(const string &filename){
+    ifstream fastaFile(filename.c_str());
+    if (!fastaFile) {
+        string errorInfo = "Error! Fail to open fasta file \"" + filename + "\" !";
+		printAndExit(errorInfo);
+    }
+    
+    string chr("region");
+    string line;
+    while(getline(fastaFile,line))
+	{
+		trim(line);
+		if(line.size() == 0)    continue;
+		if(line[0] == '>')      continue;
+        //if seq line
+        else {
+            transform(line.begin(), line.end(), line.begin(), ::toupper);
+            regionSeqs[chr] += line +"#";
+        }
+    }
+    genomeLength[chr] = regionSeqs[chr].size();
+    chromeNames.push_back(chr);
+    //  initProb(1);
+	return true;
+}
+
 
 //rm control Peaks
 void genomeRegions::rmControlPeaks(const string& filename){
@@ -717,8 +770,9 @@ void genomeRegions::getSeq(const string& outPutDir){
 
     //chr1-chr19-chrX   iterator changed in it
     for (it = genomes.begin(); it!=genomes.end();) {
+        //cerr<<it->startP<<it->chr<<it->endP<<" "<<genomes.size()<<endl;
         appendSeq(regionFile,it);
-        it++;
+        //cerr<<it->startP<<it->chr<<it->endP<<" "<<genomes.size()<<endl;
     }
     //clear memory
     sort(chromeNames.begin(), chromeNames.end(),chrCompare);
@@ -763,8 +817,11 @@ void genomeRegions::appendSeq(ostream &outFile,vector<genomeRegion>::iterator& c
             segmentStartPos.push_back(genomeLength[currentChr]+1-startCut+segmentStartPos.back());
         }
         segmentGenomePos.push_back(make_pair(currentChr, startCut));
+        //next iter
+        currentGenomeRegion++;
     } catch (exception &e) {
         currentGenomeRegion = genomes.erase(currentGenomeRegion);
+        
         cerr<<e.what()<<endl;
         cerr<<"Seq insert error: chrome:"<<currentChr<<" start:"<<startCut<<" end:"<<endCut<<" chromesize"<<rawGenome[currentChr].size()<<endl;
 
