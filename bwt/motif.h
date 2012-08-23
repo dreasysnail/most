@@ -46,10 +46,10 @@ class Motif{
     //index
     Motif(int i):index(i),overallScore(0),score(0),motifProb(0)
                 {query = translate(index);
-                pwm[0].assign(K, 0);
-                pwm[1].assign(K, 0);
-                pwm[2].assign(K, 0);
-                pwm[3].assign(K, 0);
+                pwm[0].assign(K, PEUSUDOCOUNT);
+                pwm[1].assign(K, PEUSUDOCOUNT);
+                pwm[2].assign(K, PEUSUDOCOUNT);
+                pwm[3].assign(K, PEUSUDOCOUNT);
                 }
     
     void locateMotif(const char T[]);
@@ -119,8 +119,11 @@ public:
     tempLociScore(const Motif &m,int num):Motif(m),counts(num),TP(false){index=-2;};
     void CountOnly(){myScore=counts;}
     // problematic
-    void CountAndBipeak(){myScore=counts+LogOnePlusX(tagBiPeak[0]+tagBiPeak[1]+tagBiPeak[2]);}
-    void CountAndIntensity(){myScore=counts+LogOnePlusX(signalIntensity[0]+signalIntensity[1]+signalIntensity[2]);}
+    void CountAndBipeak(){
+        myScore=counts+LogOnePlusX(tagBiPeak[0]+tagBiPeak[1]+tagBiPeak[2]);
+        //myScore=counts+(tagBiPeak[0]+tagBiPeak[1]+tagBiPeak[2])/600;
+    }
+    void CountAndIntensity(){myScore=counts+(signalIntensity[0]+signalIntensity[1]+signalIntensity[2])/30000;}
     int counts;
     float myScore;
     bool TP;

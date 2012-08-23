@@ -12,7 +12,6 @@
 #include <iomanip>
 #include <cstdlib>
 #include <cstring>
-#include <cassert>
 #include <string>
 #include <algorithm>
 #include "common.h"

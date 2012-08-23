@@ -4,7 +4,9 @@
 //
 //  Created by zhang yizhe on 12-5-20.
 //  Copyright (c) 2012年 SJTU. All rights reserved.
-//  History version
+//
+//  History version:
+//
 //  Version 1.0 (2012-6-28) 
 //  Version 1.1 (2012-7-10)  Add FFT
 //  Version 1.2 (2012-7-10)  Add control roc...
@@ -18,6 +20,8 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+
+#define NDEBUG
 #include <cassert>
 #include <map>
 #include <cassert>
@@ -34,6 +38,8 @@ using std::endl;
 using std::ostream;
 using std::pair;
 #define SAMPLESIZE 32
+//don't write locidist
+//#define WRITELOCIDIST
 
 void parseCommandLine(int argc,char** argv);
 void printUsage();
@@ -47,27 +53,26 @@ extern float MAXKLDIV;
 extern int MAXCLUSTERNUM;
 extern int MAXMOTIFNUM;
 extern long int HASH_TABLE_SIZE;
+
+extern int PEUSUDOCOUNT;
 extern map<string,string> option;
 
 
 //
 const string MOSHVERSION = "Version 1.2 (2012-7-19)";
 
-#define QUALIFIED
-#define CLUSTERLOG
+//#define QUALIFIED
+//#define CLUSTERLOG
+//#define CHIPEDPEAKDIST
 
 //200M
 const long int MAX_LENGTH=int(3e6);
+const float HASH_TABLE_MULTIPLER = 1.6;
 //A prime roughly 10% larger
 //tag counter parameters
-const int BINSPAN=6;     //range               
-const int offset=34;    //gap
+const int BINSPAN=5;     //range
+const int offset=35;    //gap
 //must be power of 2
-
-
-
-
-
 
 
 //noise vs bipeak half to half
@@ -117,12 +122,11 @@ public:
     float prob[5][4];
     //total size of each genome(<200M).
     map <string,int> genomeLength;
-    
-    
     vector<string> chromeNames;
     vector<string> tagName;
-
     int extend;
+    
+    //methods
     void getSeq(const string& outPutDir);
     void appendSeq(ostream &outFile,vector<genomeRegion>::iterator& currentGenomeRegion);
     int appendReverseGenome(string& T);
@@ -140,6 +144,7 @@ public:
     bool catenateTags();
     
     bool readFasta(const string &filename);
+    bool readRegionFasta(const string &filename);
     int segmentCount;
     //store subscript in genometag for starting pos of segment
     vector<int> segmentStartPos;
