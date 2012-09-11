@@ -259,24 +259,29 @@ int main(int argc, char **argv)
 #endif
 #ifdef QUALIFIEDPWM
         //write pwm file;
-        ofstream pwmFile((option["outdir"]+"/qualified.pwm").c_str());
-        if (!pwmFile) {
+        ofstream pwmWordFile((option["outdir"]+"/qualified.pwm").c_str());
+        if (!pwmWordFile) {
             printAndExit("Error! Fail to open pwmFile for writing!");
         }
         for (int i = 0; i<qualifiedMotifs.size(); i++) {
             printProgress(i,qualifiedMotifs.size(), "Generate PWM file for qualified words");
-            pwmFile<<qualifiedMotifs[i];   
+            pwmWordFile<<qualifiedMotifs[i];
         }
-        exit(0);
 #endif
 #ifdef CHIPEDPEAKDIST
         //output dist centered by chiped peaks
         ofstream CHIPDist((option["outdir"]+"/ChIPed_Peaks.dist").c_str());
         Motif chipPeaks(1);
         chipPeaks.loci.clear();
-        for (int i=0; i<gR->segmentStartPos.size()-1 ;i++) {
-            chipPeaks.loci.push_back(gR->segmentStartPos[i]+50);
+        for (int i=0; i<gR->segmentStartPos.size()-2 ;i++) {
+            chipPeaks.loci.push_back((gR->segmentStartPos[i]+gR->segmentStartPos[i+1])/2);
         }
+        for (int j=0; j<clusters.size(); j++){
+            fileName = outPutDir + "/chippeaks.bed";
+            ofstream lociFile(fileName.c_str(),ios::app);
+            chipPeaks.writeLoci(lociFile, *gR);
+        }
+
         chipPeaks.testMotifTag(*gR, false);
         chipPeaks.drawDist(*gR, CHIPDist);
 #endif

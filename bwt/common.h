@@ -8,6 +8,7 @@
 //  Version 1.0 (2012-6-28) 
 //  Version 1.1 (2012-7-10)  Add FFT
 //  Version 1.2 (2012-7-10)  Add control roc...
+//  Version 1.3 (2012-9-9)   Fix big bug for testMotif
 
 #ifndef bwt_common_h
 #define bwt_common_h
@@ -54,7 +55,7 @@ extern map<string,string> option;
 
 
 //
-const string MOSHVERSION = "Version 1.2 (2012-7-19)";
+const string MOSHVERSION = "Version 1.3 (2012-9-9)";
 
 #define QUALIFIED
 #define CLUSTERLOG
@@ -83,7 +84,7 @@ const int PEAKRANGE = int(300/(BINSPAN+offset));
 
 
 //cut tag extend bound
-const int EXTENDBOUND = (SAMPLESIZE+1)*BINSPAN+offset*(SAMPLESIZE+1);
+const int EXTENDBOUND = (SAMPLESIZE+2)*BINSPAN+offset*(SAMPLESIZE+2);
 
 //FFT
 const float PI = 3.1416;

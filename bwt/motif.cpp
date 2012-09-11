@@ -125,12 +125,23 @@ void Motif::testMotifTag(genomeRegions &gR,bool ifDraw){
                 }
                 int thisLociCenter = mapLoci(loci[i],gR.segmentStartPos);
                 //cerr<<tag[thisLociCenter]<<" "<<thisLociCenter<<endl;
-                for (int l=0; l<2*SAMPLESIZE+1; l++) {
-                    for (int j=(l-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j<(l+1-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j++) {
-                        sumBin[l][t] += tag[thisLociCenter+j];
+                int tempsize = gR.segmentStartPos.size()/2;
+                //+ direction
+                if (loci[i]<gR.segmentStartPos[tempsize]) {
+                    for (int l=0; l<2*SAMPLESIZE+1; l++) {
+                        for (int j=(l-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j<(l+1-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j++) {
+                            sumBin[l][t] += tag[thisLociCenter+j];
+                        }
                     }
                 }
-
+                //- direction
+                else {
+                    for (int l=0; l<2*SAMPLESIZE+1; l++) {
+                        for (int j=(l-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j<(l+1-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j++) {
+                            sumBin[2*SAMPLESIZE-l][t] += tag[thisLociCenter+j];
+                        }
+                    }
+                }
             }
             for (int i=0; i<SAMPLESIZE*2+1; i++) {
                 totalAround += sumBin[i][t];
@@ -614,7 +625,7 @@ void Cluster::trim(){
     int start = 0;
     int end = query.size()-1;
     int maxPWM = sumPWM();
-    int trimMultiper = atoi(option["trim"].c_str());
+    int trimMultiper = 100 - atoi(option["trim"].c_str());
     while (trivial(start)||
            totalPWM[start]<maxPWM/trimMultiper||
            ((totalPWM[start]<maxPWM*2/trimMultiper)&&oligo(start))) {
