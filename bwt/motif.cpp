@@ -103,8 +103,13 @@ inline int Motif::mapLoci(int genomePos,const vector<int>& StartPs){
 
 
 void Motif::testMotifTag(genomeRegions &gR,bool ifDraw){
-    // get intensity noise bipeak asymmetry
-    assert(loci.size()!=0);
+    if (option["mode"]!="tag")  return;
+    //protocol: input:   loci
+    //          outlet: intensity noise bipeak asymmetry sumbin
+    if(loci.size()==0){
+        initBin(gR);
+        return;
+    }
     //only need loci and tagSeq
     tagBiPeak.clear();
     tagSymmetry.clear();
@@ -470,6 +475,7 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
 
 
 void Motif::initLociScore(){
+    //for roc?
     lociScore.clear();
     lociScore.assign(loci.size(), 1);
 }
@@ -650,6 +656,7 @@ void Cluster::reCalSumBin(const Motif& m,const genomeRegions &gR){
         for (int l=0; l<2*SAMPLESIZE+1; l++) {
             sumBin[l][t]=(sumBin[l][t]*loci.size()+m.sumBin[l][t]*m.loci.size());
         }
+        /*
         float totalAround = 0;
         for (int i=0; i<SAMPLESIZE*2+1; i++) {
             totalAround += sumBin[i][t];
@@ -661,6 +668,7 @@ void Cluster::reCalSumBin(const Motif& m,const genomeRegions &gR){
             //normalization
             sumBin[i][t] /= totalAround;
         }
+        */
     }
 }
 
@@ -689,6 +697,50 @@ bool Cluster::oligo(int pos){
             return true;
     }
     return false;
+}
+
+void Cluster::getExtended(const Motif &m, genomeRegions &gR, Suffix & active){
+    //protocol:
+    //         outlet: pwm,loci,sumbin,4*score
+    // extend word
+    initBin(gR);
+    string originWord = m.query;
+    query = m.query;
+    char alps[4] = {'A','C','G','T'};
+    for (int pos=0; pos<K; pos++) {
+        string tempWord = originWord;
+        //permutation in first places
+        for (int alp=0; alp<4; alp++) {
+            tempWord[pos] = alps[alp];
+            Motif thisMotif(tempWord);
+            thisMotif.initProb(gR, atoi(option["order"].c_str()));
+            thisMotif.loci = active.locateMotif(thisMotif);
+            pwm[alp][pos] = thisMotif.loci.size();
+            appendLoci(thisMotif);
+            addProb(thisMotif, K);
+        }        
+    }
+    
+    //need normalization sumbin
+    for (int t=0; t<gR.tagName.size(); t++) {
+        float totalAround = 0;
+        for (int i=0; i<SAMPLESIZE*2+1; i++) {
+            totalAround += sumBin[i][t];
+        }
+        if (totalAround==0) {
+            totalAround+=SMALLNUM;
+        }
+        for (int i=0; i<SAMPLESIZE*2+1; i++) {
+            //normalization
+            sumBin[i][t] /= totalAround;
+        }
+    }
+    calConscore(RegionSize);
+    testMotifTag(gR,false);
+    sumOverallScore();
+    
+    //IUPAC annotation
+
 }
 
 

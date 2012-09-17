@@ -17,10 +17,12 @@
 //#include <stdio.h>
 //#include <stdlib.h>
 #include "common.h"
+#include "bwt.h"
 using std::cout;
 using std::endl;
 using std::string;
 using std::vector;
+class Suffix;
 
 class Motif{
     public:
@@ -45,7 +47,14 @@ class Motif{
     
     //index
     Motif(int i):index(i),overallScore(0),score(0),motifProb(0)
-                {query = translate(index);
+                {query = index2Str(index);
+                pwm[0].assign(K, PEUSUDOCOUNT);
+                pwm[1].assign(K, PEUSUDOCOUNT);
+                pwm[2].assign(K, PEUSUDOCOUNT);
+                pwm[3].assign(K, PEUSUDOCOUNT);
+                }
+    Motif(string i):query(i),overallScore(0),score(0),motifProb(0)
+                {index = str2index(query);
                 pwm[0].assign(K, PEUSUDOCOUNT);
                 pwm[1].assign(K, PEUSUDOCOUNT);
                 pwm[2].assign(K, PEUSUDOCOUNT);
@@ -62,6 +71,7 @@ class Motif{
     void initPWM();
     //void calPWM(const vector<Motif>& allmotifs);
     void calConscore(int nSize){
+        //protocol: motifProb loci
         if (loci.size()>motifProb*nSize*DELTA)
             score = loci.size()/motifProb/nSize;
         else 
@@ -88,8 +98,9 @@ class Motif{
     static int distance[4][15]; 
     //print info
     void printMotif(ostream &s);  
-    inline static string translate(int i);
-    //cluster method
+    inline string index2Str(int i);
+    inline int str2index(string &i);
+
 
 };
 
@@ -108,6 +119,8 @@ public:
     bool trivial(int pos);
     bool oligo(int pos);
     void writeCLusterLog(ostream &s,const Motif& m);
+    //get extension from word m
+    void getExtended(const Motif &m, genomeRegions &gR, Suffix & active);
     //sumpwm for trim
     vector<int> totalPWM;
     int sumPWM();
@@ -238,7 +251,7 @@ public:
 
 
 
-inline string Motif::translate(int query){
+inline string Motif::index2Str(int query){
     string tempS("");
     char currentNum;
     
@@ -265,6 +278,15 @@ inline string Motif::translate(int query){
     return tempS;
 }
 
+inline int Motif::str2index(string &query){
+    int tempIndex = 0;
+    for (int i=K-1; i>=0; i--){
+        tempIndex = tempIndex*4 + alp2num(query[i]);
+        
+    }
+    return tempIndex;
+}
+
 
 //print pwm to stream
 ostream &operator<<( ostream &s, Motif &motif );
@@ -279,7 +301,8 @@ inline void Cluster::appendLoci(const Motif& m){
     loci.insert(loci.end(),m.loci.begin(),m.loci.end());
 }
 inline void Cluster::addProb(const Motif& m,int prevSize){
-    motifProb = ((m.motifProb/K)*m.loci.size()+(motifProb/prevSize)*loci.size())/(m.loci.size()+loci.size())*query.size();
+    //motifProb = ((m.motifProb/K)*m.loci.size()+(motifProb/prevSize)*loci.size())/(m.loci.size()+loci.size())*query.size();
+    motifProb = m.motifProb+motifProb;
 }
 
 

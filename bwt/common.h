@@ -302,4 +302,5 @@ float calPhi(float x);
 float LogOnePlusX(float x);
 float RationalApproximation(float t);
 float NormalCDFInverse(float p);
+float PearsonCorrPWM(vector<int> *pwm1,vector<int> *pwm2);
 #endif

@@ -51,8 +51,6 @@ int main(int argc, char **argv)
 
     cerr<<"START MOTIF FINDING"<<endl;
     
-    
-    
     while (true) {
         
         string outPutDir(option["outdir"]); 
@@ -166,8 +164,8 @@ int main(int argc, char **argv)
                     continue;
                 }
                 counter1++;
-                thisMotif.initPWM();
-                thisMotif.initLociScore();
+                //thisMotif.initPWM();
+                //thisMotif.initLociScore();
                 if (option["mode"]=="tag"){
                     thisMotif.testMotifTag(*gR, false);
                 }
@@ -176,36 +174,12 @@ int main(int argc, char **argv)
                     MotifHeap.push(thisMotif);
                 }
                 if (MotifHeap.size()<MAXMOTIFNUM||thisMotif.overallScore>MotifHeap.top().overallScore) {
-                    //has pwm loci lociscore sign noise conscore motifProb overallscore.
+                    //protocol:has pwm loci lociscore sign noise conscore motifProb overallscore.
                     MotifHeap.push(thisMotif);
                     if (MotifHeap.size()>MAXMOTIFNUM) {
                         MotifHeap.pop();
                     }
                 }
-                /*
-                if (option["mode"]=="tag"){
-                    thisMotif.testMotifTag(*gR, outPutDir, false);
-                    float TagscoreThresh=MINTAGSCORE;
-                    if (option["FFT"]=="T") {
-                        TagscoreThresh-=MAXNOISE;
-                    }
-                    if (thisMotif.sumTagScore()-thisMotif.tagNoise>TagscoreThresh){
-                        
-                        qualifiedMotifs.push_back(thisMotif);
-                    }
-                    
-                    else {
-                        //filtered motif
-                        clusterFile<<"Filtered word:\t"<<thisMotif.query<<"\t"<<thisMotif.score<<"\t"<<thisMotif.tagBiPeak<<"\t"<<thisMotif.tagNoise<<endl;
-                        // for test
-                        thisMotif.testMotifTag(*gR, outPutDir, true);
-                    }
-                    
-                }
-                else {
-                    qualifiedMotifs.push_back(thisMotif);
-                }
-                */
             }
         }
         cerr<<"clustering result:";
@@ -235,15 +209,22 @@ int main(int argc, char **argv)
         int inverseAlignedCount = 0;
         int normalAligned = 0;
         int maxMotifSize=min(MAXMOTIFNUM, int(MotifHeap.size()));
-        vector<Motif> qualifiedMotifs;
+        vector<Cluster> qualifiedMotifs;
         qualifiedMotifs.reserve(MAXMOTIFNUM);
+        
+        
+        //extend motif
         while (!MotifHeap.empty())
         {
-            qualifiedMotifs.push_back(MotifHeap.top());
+            Cluster temp0(Motif (1));
+            temp0.getExtended(MotifHeap.top(), *gR, active);
+            qualifiedMotifs.push_back(temp0);
             MotifHeap.pop();
         }
+        
         //qualifiedMotifs[0].printMotif();
-        reverse(qualifiedMotifs.begin(), qualifiedMotifs.end());
+        sort(qualifiedMotifs.begin(),qualifiedMotifs.end(),compareMotif());
+        
 #ifdef QUALIFIED
         ofstream wordFile((option["outdir"]+"/qualified.log").c_str());
         ofstream wordDist((option["outdir"]+"/qualified.dist").c_str());
@@ -373,10 +354,8 @@ int main(int argc, char **argv)
                     clusters[j].appendLoci(qualifiedMotifs[i]);
                     clusters[j].addProb(qualifiedMotifs[i],prevSize);
                     clusters[j].calConscore(RegionSize);
-                    if (option["mode"]=="tag"){
-                        //update noise and tagscore
-                        clusters[j].testMotifTag(*gR,false);
-                    }
+                    //update noise and tagscore
+                    clusters[j].testMotifTag(*gR,false);
                     clusters[j].sumOverallScore();
                     sort(clusters.begin(),clusters.end(),compareMotif());
                     goto nextMotif;
@@ -538,8 +517,8 @@ void test(){
     cerr<<endl;
      */
     
-    float fvec[65]={1.37328e-05,6.53941e-06,1.30788e-05,1.30788e-05,0.00022234,0.000268116,0.000251113,0.000245228,0.000288061,0.000306208,0.00027956,0.000291331,0.000235419,0.000249805,0.00024719,0.000232476,0.000251113,0.000255691,0.000256835,0.000305554,0.000314873,0.000518085,0.000557975,0.000603261,0.000775574,0.000794211,0.000812685,0.000797645,0.000743694,0.000814156,0.00076413,0.000725221,0.000744675,0.000657865,0.000679935,0.00073176,0.000633669,0.00060604,0.000524951,0.000410675,0.000354109,0.000292639,0.000260759,0.000248988,0.000327461,0.000362283,0.000376016,0.000482608,0.000475415,0.00044517,0.000505823,0.000432255,0.000471164,0.000398904,0.000324845,0.000314709,0.000279723,0.000241141,0.000207626,0.000196182,0.000188825,0.000121143,0.000122123,8.33775e-05,4.31601e-05};
-    vector<float> tempVec(fvec,fvec+4);
+    //float fvec[65]={1.37328e-05,6.53941e-06,1.30788e-05,1.30788e-05,0.00022234,0.000268116,0.000251113,0.000245228,0.000288061,0.000306208,0.00027956,0.000291331,0.000235419,0.000249805,0.00024719,0.000232476,0.000251113,0.000255691,0.000256835,0.000305554,0.000314873,0.000518085,0.000557975,0.000603261,0.000775574,0.000794211,0.000812685,0.000797645,0.000743694,0.000814156,0.00076413,0.000725221,0.000744675,0.000657865,0.000679935,0.00073176,0.000633669,0.00060604,0.000524951,0.000410675,0.000354109,0.000292639,0.000260759,0.000248988,0.000327461,0.000362283,0.000376016,0.000482608,0.000475415,0.00044517,0.000505823,0.000432255,0.000471164,0.000398904,0.000324845,0.000314709,0.000279723,0.000241141,0.000207626,0.000196182,0.000188825,0.000121143,0.000122123,8.33775e-05,4.31601e-05};
+    //vector<float> tempVec(fvec,fvec+4);
     /*
     FFT tempFFT(tempVec);
     cerr<<(tempFFT.denoise(int(SAMPLESIZE*5/8))*NOISEWEIGHT)<<endl;
@@ -550,11 +529,39 @@ void test(){
     tempBin.push_back(fvec[64]);
     cerr<<tempBin<<endl;
     cerr<<testSymmety(tempBin)<<endl;
-    */
+    
     for (vector<float>::iterator i=tempVec.begin();i!=tempVec.end();) {
         cerr<<*i<<endl;
         i++;
     }
+    */
+    
+    //test pearson
+    /*
+    int a[4][6]={{1,2,3,4,5,6},
+                 {1,2,3,4,5,6},
+                 {1,2,3,4,5,6},
+                 {1,2,3,4,5,6}};
+    
+    int b[4][6]={{4,5,6,3,2,1},
+        {1,2,3,4,5,6},
+        {6,5,4,3,2,1},
+        {6,5,4,3,2,1}};
+    vector<int> pwm1[4],pwm2[4];
+    for (int j=0; j<6; j++) {
+        for (int i=0; i<4; i++) {
+            pwm1[i].push_back(a[i][j]);
+            pwm2[i].push_back(b[i][j]);
+        }
+    }
+    
+    cerr<<PearsonCorrPWM(pwm1, pwm2)<<endl;
+    */
+    //test str2index
+    Motif temp(2345);
+    cerr<<temp.query<<temp.str2index(temp.query)<<endl;
+
+    
     
     assert(0==1);
 }

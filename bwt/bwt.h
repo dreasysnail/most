@@ -33,6 +33,7 @@ using std::min;
 
 class Node;
 class Edge;
+class Motif;
 
 class Suffix {
 
