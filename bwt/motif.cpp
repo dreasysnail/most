@@ -480,6 +480,65 @@ void Motif::initLociScore(){
     lociScore.assign(loci.size(), 1);
 }
 
+float Motif::PearsonCorrPWM(const Motif &m,int offset,int clustersize,bool strand){
+    float innerProduct = 0;
+    float sigmaX = 0;
+    float sigmaY = 0;
+    float sigmaSquareX = 0;
+    float sigmaSquareY = 0;
+    int samplesize = 0;
+    if (strand){
+        for (int i=max(-offset, 0); i<min(K, clustersize-offset); i++) {
+            for (int nucleotide=0; nucleotide<4; nucleotide++) {
+                innerProduct += pwm[nucleotide][i+offset]*m.pwm[nucleotide][i];
+                sigmaX += pwm[nucleotide][i+offset];
+                sigmaY += m.pwm[nucleotide][i];
+                sigmaSquareX += pwm[nucleotide][i+offset]*pwm[nucleotide][i+offset];
+                sigmaSquareY += m.pwm[nucleotide][i]*m.pwm[nucleotide][i];
+                samplesize++;
+            }
+        }
+    }
+    else {
+        int pwmsize = m.pwm[0].size()-1;
+        for (int i=max(-offset, 0); i<min(K, clustersize-offset); i++) {
+            for (int nucleotide=0; nucleotide<4; nucleotide++) {
+                innerProduct += pwm[nucleotide][i+offset]*m.pwm[3-nucleotide][pwmsize-i];
+                sigmaX += pwm[nucleotide][i+offset];
+                sigmaY += m.pwm[3-nucleotide][pwmsize-i];
+                sigmaSquareX += pwm[nucleotide][i+offset]*pwm[nucleotide][i+offset];
+                sigmaSquareY += m.pwm[3-nucleotide][pwmsize-i]*m.pwm[3-nucleotide][pwmsize-i];
+                samplesize++;
+            }
+        }
+        
+    }
+    
+    
+    return (samplesize*innerProduct-sigmaX*sigmaY)/sqrtf((samplesize*sigmaSquareX-sigmaX*sigmaX)*(samplesize*sigmaSquareY-sigmaY*sigmaY));
+}
+
+
+
+void Motif::generateIUPAC(){
+    //protocol: in: PWM
+    //out: query
+    float THRESHOLD = 0.15;
+    string tempStr("");
+    sumPWM();
+    char alp[4]={'A','C','G','T'};
+    for (int pos = 0; pos<pwm[0].size(); pos++) {
+        tempStr.push_back(' ');
+        for (int base = 0; base<4; base++) {
+            if (pwm[base][pos]/float(totalPWM[pos])>THRESHOLD) {
+                tempStr[tempStr.size()-1] = degenerate(tempStr[tempStr.size()-1], alp[base]);
+            }
+        }
+    }
+    query = tempStr;   
+}
+
+
 
 
 //clustering methods
@@ -489,10 +548,11 @@ pair<float,int> Cluster::editDistance(const Motif& m){
     Cluster &cluster = (*this);
     float score = 1000;
     int optimShift = -100;
-    int bound = MAXSHIFT+1+cluster.query.size()-K;
+    int DISTWEIGHT =10;
+    int bound = MAXSHIFT+1+cluster.pwm[0].size()-K;
     for (int i=-MAXSHIFT; i<bound; i++) {
         //cout<<i<<cluster.query<<endl;
-        //gap punish 2
+        //offset punishment 0.5 per site
         float tempScore = 0;
         if (i<0) {
             tempScore = -0.5*i;
@@ -501,15 +561,21 @@ pair<float,int> Cluster::editDistance(const Motif& m){
             tempScore = 0.5*(MAXSHIFT-bound+i+1);
             //tempScore = K-cluster.query.size()+i;
         }
+        /*
         for (int j=0; j<K; j++) {
             if (j+i<0||j+i>=int(cluster.query.size())) {
                 continue;
             }
+            
             else {
                 //tempScore += distance[alp2num(m.query[j])][alp2num(cluster.query[j+i])];
                 tempScore += 1-log2f(cluster.pwm[alp2num(m.query[j])][j+i]/float(cluster.totalPWM[j+i])+1);
+                
+            
             } 
         }
+        */
+        tempScore = (1-PearsonCorrPWM(m,i,int(cluster.pwm[0].size()),true))*DISTWEIGHT;
         if (tempScore<score) {
             score = tempScore;
             optimShift = i;
@@ -517,7 +583,7 @@ pair<float,int> Cluster::editDistance(const Motif& m){
     }
     // discard antisenses
     bool antiBetter = false;
-    string anti(::antisense(m.query));
+    //string anti(::antisense(m.query));
     for (int i=-MAXSHIFT; i<bound; i++) {
         //cout<<i<<cluster.query<<endl;
         float tempScore = 0;
@@ -528,15 +594,7 @@ pair<float,int> Cluster::editDistance(const Motif& m){
             tempScore = 0.5*(MAXSHIFT-bound+i+1);
             //tempScore = K-cluster.query.size()+i;
         }
-        for (int j=0; j<K; j++) {
-            if (j+i<0||j+i>=cluster.query.size()) {
-                continue;
-            }
-            else {
-                //tempScore += distance[alp2num(anti[j])][alp2num(cluster.query[j+i])];
-                tempScore += 1-log2f(cluster.pwm[alp2num(anti[j])][j+i]/float(cluster.totalPWM[j+i])+1);
-            } 
-        }
+        tempScore = (1-PearsonCorrPWM(m,i,int(cluster.pwm[0].size()),false))*DISTWEIGHT;
         if (tempScore<score) {
             score = tempScore;
             optimShift = i;
@@ -552,6 +610,7 @@ pair<float,int> Cluster::editDistance(const Motif& m){
 
 
 void Cluster::concatenate(const Motif& m,int index,int optimShift){
+    // degenerate query
     //assert this is a cluster
     //assert(m.index!=-1);
     // expMotifs++
@@ -610,8 +669,11 @@ float Cluster::tagDistrDistance(const Motif& m){
 
 
 void Cluster::mergeLoci(){
+    // change score implicitly
+    
     lociScore.clear();
     sort(loci.begin(),loci.end());
+    int prevSize = loci.size();
     vector<int> newloci(loci.begin(),loci.begin()+1);
     lociScore.push_back(1);
     for (int i=1; i<loci.size(); i++) {
@@ -625,6 +687,7 @@ void Cluster::mergeLoci(){
         }
     }
     loci.swap(newloci);
+    score = score*loci.size()/float(prevSize);
 }
 
 void Cluster::trim(){
@@ -715,6 +778,10 @@ void Cluster::getExtended(const Motif &m, genomeRegions &gR, Suffix & active){
             Motif thisMotif(tempWord);
             thisMotif.initProb(gR, atoi(option["order"].c_str()));
             thisMotif.loci = active.locateMotif(thisMotif);
+            thisMotif.calConscore(RegionSize);
+            if (thisMotif.score<=0) {
+                continue;
+            }
             pwm[alp][pos] = thisMotif.loci.size();
             appendLoci(thisMotif);
             addProb(thisMotif, K);
@@ -744,7 +811,7 @@ void Cluster::getExtended(const Motif &m, genomeRegions &gR, Suffix & active){
 }
 
 
-int Cluster::sumPWM(){
+int Motif::sumPWM(){
     totalPWM.clear();
     for (int i=0; i<pwm[0].size(); i++) {
         totalPWM.push_back(pwm[0][i]+pwm[1][i]+pwm[2][i]+pwm[3][i]);
@@ -830,6 +897,13 @@ void Motif::sumOverallScore(){
     overallScore = score+STDScore-noiseScore-symmetryScore+0.0001;
 }
 
+void Cluster::mergeProb(const Motif& m){
+    score =(score*loci.size()+m.score*m.loci.size())/(loci.size()+m.loci.size());
+    motifProb = (loci.size()+m.loci.size())/RegionSize/score;
+    return;
+}
+
+
 float Motif::sumTagScore(){
     float tempScore = 0;
     if (tagBiPeak.size()==0) {
@@ -855,9 +929,11 @@ void Motif::printMotif(ostream &s){
             s<<tagNoise[i]<<"\t";
         }
     }
+    /*
     for (int i=0; i<signalIntensity.size(); i++) {
         s<<signalIntensity[i]<<"\t";
     }
+    */
     s<<loci.size()<<endl;
 }
 

@@ -7,6 +7,8 @@
 //
 
 #pragma once
+#ifndef BWT_T
+#define BWT_T
 
 #include <iostream>
 #include <iomanip>
@@ -160,4 +162,4 @@ ostream &operator<<( ostream &s, const Node &node );
 istream &operator>>( istream &s, Buffer &b );
 void print_parents( ostream &s, int node);
 
-
+#endif

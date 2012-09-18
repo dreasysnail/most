@@ -1167,7 +1167,6 @@ string antisense(const string& tempString){
 
 char degenerate(char a,char b){
     //assert
-    assert(a=='A'||a=='C'||a=='G'||a=='T');
     switch (a) {
         case 'A':
             switch (b) {
@@ -1318,6 +1317,7 @@ char degenerate(char a,char b){
             break;
             
         default:
+            return b;
             break;
     }
     return '_';
@@ -1470,24 +1470,4 @@ float NormalCDFInverse(float p)
     
 }
 
-float PearsonCorrPWM(vector<int> *pwm1,vector<int> *pwm2){
-    assert(pwm1[0].size()==pwm2[0].size());
-    float samplesize = pwm1[0].size();
-    float innerProduct = 0;
-    float sigmaX = 0;
-    float sigmaY = 0;
-    float sigmaSquareX = 0;
-    float sigmaSquareY = 0;
-    for (int i=0; i<samplesize; i++) {
-        for (int nucleotide=0; nucleotide<1; nucleotide++) {
-            innerProduct += pwm1[nucleotide][i]*pwm2[nucleotide][i];
-            sigmaX += pwm1[nucleotide][i];
-            sigmaY += pwm2[nucleotide][i];
-            sigmaSquareX += pwm1[nucleotide][i]*pwm1[nucleotide][i];
-            sigmaSquareY += pwm2[nucleotide][i]*pwm2[nucleotide][i];
-        }
-    }
-    
-    return (samplesize*innerProduct-sigmaX*sigmaY)/sqrt((samplesize*sigmaSquareX-sigmaX*sigmaX)*(samplesize*sigmaSquareY-sigmaY*sigmaY));
-}
 

@@ -197,13 +197,12 @@ int main(int argc, char **argv)
         
         cerr<<"count words:"<<double((t3-t2)/1e6)<<endl;
         
-        delete [] Nodes;
-        delete [] Edges;
+
         
     
-        //clustering
+        /********************* Clustering ***********************/
    
-        //cout<<qualifiedMotifs.size()<<qualifiedMotifs[0]<<qualifiedMotifs[1]<<endl;
+        
         vector<Cluster> clusters;
         int exceedLengthCount = 0;
         int inverseAlignedCount = 0;
@@ -221,6 +220,10 @@ int main(int argc, char **argv)
             qualifiedMotifs.push_back(temp0);
             MotifHeap.pop();
         }
+        
+        //??
+        delete [] Nodes;
+        delete [] Edges;
         
         //qualifiedMotifs[0].printMotif();
         sort(qualifiedMotifs.begin(),qualifiedMotifs.end(),compareMotif());
@@ -300,7 +303,7 @@ int main(int argc, char **argv)
                     continue;
                 }
                 else if (aligned) {
-                    int queryLength = clusters[j].query.size();
+                    int queryLength = clusters[j].pwm[0].size();
                     //if cluster size exceed Max cluster size after this motif appended,discard
                     if (queryLength>=atoi(option["clusterlength"].c_str())&&(dist_shift.second<0||dist_shift.second+K>queryLength)) {
                         exceedLengthCount++;
@@ -344,16 +347,15 @@ int main(int argc, char **argv)
                     }
 #endif               
                     normalAligned++;
-                    int prevSize = clusters[j].query.size();
-                    clusters[j].concatenate(qualifiedMotifs[i],i,dist_shift.second);
+                   
+                    //clusters[j].concatenate(qualifiedMotifs[i],i,dist_shift.second);
                     //recalculate four attributes
                     clusters[j].calPWM(qualifiedMotifs[i], dist_shift.second);
                     if (option["mode"]=="tag"){
                         clusters[j].reCalSumBin(qualifiedMotifs[i], *gR);
                     }
                     clusters[j].appendLoci(qualifiedMotifs[i]);
-                    clusters[j].addProb(qualifiedMotifs[i],prevSize);
-                    clusters[j].calConscore(RegionSize);
+                    clusters[j].mergeProb(qualifiedMotifs[i]);
                     //update noise and tagscore
                     clusters[j].testMotifTag(*gR,false);
                     clusters[j].sumOverallScore();
@@ -399,13 +401,15 @@ int main(int argc, char **argv)
         nextMotif:
             continue;
         }
-        
+    
         //calculating
         for (int j=0; j<clusters.size(); j++){
-            clusters[j].trim(); 
+            
+            clusters[j].generateIUPAC();
+            //clusters[j].trim();
             clusters[j].mergeLoci();
             clusters[j].testMotifTag(*gR,true);
-            clusters[j].calConscore(RegionSize);
+            //clusters[j].calConscore(RegionSize);
             clusters[j].sumOverallScore();
         }
         sort(clusters.begin(),clusters.end(),compareMotif());
@@ -537,29 +541,42 @@ void test(){
     */
     
     //test pearson
+    K=6;
     /*
     int a[4][6]={{1,2,3,4,5,6},
-                 {1,2,3,4,5,6},
-                 {1,2,3,4,5,6},
-                 {1,2,3,4,5,6}};
-    
-    int b[4][6]={{4,5,6,3,2,1},
+                 {2,3,4,5,6,7},
+                 {3,2,3,4,5,6},
+                 {4,2,3,4,5,6}};
+     int b[4][6]={        {6,5,4,3,2,1},
+     {6,5,4,3,2,1},
+     {6,5,4,3,2,1},
+     {6,5,4,3,2,1}};
+    */
+    int a[4][6]={{1,2,3,4,5,6},
         {1,2,3,4,5,6},
+        {1,2,3,4,5,6},
+        {1,2,3,4,5,8}};
+    
+
+    int b[4][6]={{8,5,4,3,2,1},
+        {6,5,4,3,2,1},
         {6,5,4,3,2,1},
         {6,5,4,3,2,1}};
-    vector<int> pwm1[4],pwm2[4];
+    
+    
+    Motif m1(1),m2(2);
     for (int j=0; j<6; j++) {
         for (int i=0; i<4; i++) {
-            pwm1[i].push_back(a[i][j]);
-            pwm2[i].push_back(b[i][j]);
+            m1.pwm[i][j]=a[i][j];
+            m2.pwm[i][j]=b[i][j];
         }
     }
+    cerr<<m1.PearsonCorrPWM(m2, 0, 6, false)<<endl;
     
-    cerr<<PearsonCorrPWM(pwm1, pwm2)<<endl;
-    */
-    //test str2index
-    Motif temp(2345);
-    cerr<<temp.query<<temp.str2index(temp.query)<<endl;
+    
+   
+    
+    
 
     
     

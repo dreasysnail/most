@@ -100,6 +100,12 @@ class Motif{
     void printMotif(ostream &s);  
     inline string index2Str(int i);
     inline int str2index(string &i);
+    //pwm
+    float PearsonCorrPWM(const Motif &m,int offset,int clustersize,bool strand);
+    void generateIUPAC();
+    //sumpwm for trim
+    vector<int> totalPWM;
+    int sumPWM();
 
 
 };
@@ -115,15 +121,13 @@ public:
     inline void appendLoci(const Motif& m);
     void reCalSumBin(const Motif& m,const genomeRegions &gR);
     void mergeLoci();
+    void mergeProb(const Motif& m);
     void trim();
     bool trivial(int pos);
     bool oligo(int pos);
     void writeCLusterLog(ostream &s,const Motif& m);
     //get extension from word m
     void getExtended(const Motif &m, genomeRegions &gR, Suffix & active);
-    //sumpwm for trim
-    vector<int> totalPWM;
-    int sumPWM();
 };
 
 //temp roc ploting
@@ -306,4 +310,9 @@ inline void Cluster::addProb(const Motif& m,int prevSize){
 }
 
 
+
+
+
 #endif
+
+
