@@ -1,6 +1,6 @@
 //
 //  common.h
-//  bwt
+//  MOST
 //
 //  Created by zhang yizhe on 12-5-20.
 //  Copyright (c) 2012年 SJTU. All rights reserved.
@@ -47,19 +47,19 @@ void printUsage();
 //define motif length
 extern int K;
 extern float DELTA;
-extern int MAXSHIFT;
-extern float MAXDISTANCE;
-extern float MAXKLDIV;
-extern int MAXCLUSTERNUM;
-extern int MAXMOTIFNUM;
+extern int MAX_SHIFT;
+extern float MAX_DIST;
+extern float MAX_KL_DIV;
+extern int MAX_CLUSTER_NUM;
+extern int MAX_WORD_NUM;
 extern long int HASH_TABLE_SIZE;
 
-extern int PEUSUDOCOUNT;
+extern int PEUSUDO_COUNT;
 extern map<string,string> option;
 
 
 //
-const string MOSHVERSION = "Version 1.2 (2012-7-19)";
+const string MOSTVERSION = "Version 1.3 (2012-8-19)";
 
 //#define QUALIFIED
 //#define CLUSTERLOG
@@ -70,20 +70,20 @@ const long int MAX_LENGTH=int(3e6);
 const float HASH_TABLE_MULTIPLER = 1.6;
 //A prime roughly 10% larger
 //tag counter parameters
-const int BINSPAN=5;     //range
-const int offset=35;    //gap
+const int BIN_SPAN=5;     //range
+const int OFF_SET=35;    //gap
 //must be power of 2
 
 
 //noise vs bipeak half to half
-const int NOISEWEIGHT = 400;
-const int BIPEAKWEIGHT = 200;
-const int SYMMETRYWEIGHT = 10;
-const int PEAKRANGE = int(300/(BINSPAN+offset));
+const int NOISE_WEIGHT = 400;
+const int BIPEAK_WEIGHT = 200;
+const int SYMMETRY_WEIGHT = 10;
+const int PEAK_RANGE = int(300/(BIN_SPAN+OFF_SET));
 
 
 //cut tag extend bound
-const int EXTENDBOUND = (SAMPLESIZE+1)*BINSPAN+offset*(SAMPLESIZE+1);
+const int EXTEND_BOUND = (SAMPLESIZE+1)*BIN_SPAN+OFF_SET*(SAMPLESIZE+1);
 
 //FFT
 const float PI = 3.1416;
@@ -136,7 +136,6 @@ public:
     void initProb(int mode);
     bool existChr(const string& chr){return find(chromeNames.begin(),chromeNames.end(),chr)==chromeNames.end()?false:true;}
     void printProb();
-    void writeRawTag(genomeRegions &tagBed);
     void mergeOverlap();
     bool readBed(const string &filename);
     //read and write rawTag;
@@ -271,19 +270,13 @@ inline int alp2num(const char& name){
 float pow1(float base,int index);
 string antisense(const string& tempString);
 char degenerate(char a,char b);
-//assume sorted , locate subscript return <sub,BINSPAN>
+    
+//assume sorted , locate subscript return <sub,BIN_SPAN>
 pair<int,int> locateSubscript(const vector<int> &listObj, vector<int>::const_iterator begin,vector<int>::const_iterator end, int queryVal);
+    
 float symKLDiv(const vector<float> &lhs, const vector<float> &rhs);
-inline float normalization(vector<float>& fvec){
-    float total;
-    for (int i=0; i<fvec.size(); i++) {
-        total += fvec[i];
-    }
-    for (int i=0; i<fvec.size(); i++) {
-        fvec[i]/=total;
-    }
-    return total;
-}
+float normalization(vector<float>& fvec);
+    
 inline float testSymmety(const vector<float> &fvec){
     vector<float> lhs(fvec.begin(),fvec.begin()+fvec.size()/2);
     normalization(lhs);

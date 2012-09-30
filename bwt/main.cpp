@@ -105,7 +105,7 @@ int main(int argc, char **argv)
             
             for (int i=0; i<gR->tagName.size(); i++) {
                 cerr<<gR->tagName[i]<<" size:"<<gR->regionTags[gR->tagName[i]].size()<<"\t";
-                cerr<<long(gR->regionTags[gR->tagName[i]].size())-EXTENDBOUND*4*gR->segmentCount<<endl;
+                cerr<<long(gR->regionTags[gR->tagName[i]].size())-EXTEND_BOUND*4*gR->segmentCount<<endl;
                 assert(RegionSize==long(gR->regionTags[gR->tagName[i]].size())-EXTENDBOUND*4*gR->segmentCount);
             }
         }

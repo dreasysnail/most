@@ -1,6 +1,6 @@
 //
 //  motif.cpp
-//  bwt
+//  MOST
 //
 //  Created by zhang yizhe on 12-5-20.
 //  Copyright (c) 2012年 SJTU. All rights reserved.
@@ -13,66 +13,11 @@
 using namespace std;
 
 int RegionSize;
-/*
-int Motif::distance[4][15] = {  {0,1,1,1,0,0,0,1,1,1,1,0,0,0,0},
-                                {1,0,1,1,0,1,1,0,0,1,0,1,0,0,0}, 
-                                {1,1,0,1,1,0,1,0,1,0,0,0,1,0,0},
-                                {1,1,1,0,1,1,0,1,0,0,0,0,0,1,0}};
-int Motif::distance[4][15] = {  {0,6,6,6,1,1,1,5,5,5,4,2,2,2,3},
-                                {6,0,6,6,1,5,5,1,1,5,2,4,2,2,3}, 
-                                {6,6,0,6,5,1,5,1,5,1,2,2,4,2,3},
-                                {6,6,6,0,5,5,1,5,1,1,2,2,2,4,3}};
-*/
-/*
-vector<int> Motif::explainMotif(){
-    //find all possible explanation(generalization)
-    vector<int> tempV;
-    expMotifs.swap(tempV);
-    if (noWildcard()) {
-        expMotifs.push_back(index);
-        return expMotifs;
-    }
-    string tempString("");
-    int tempIndex=index;
-    int currentNum;
-    int traverseIndex = 1;
-    //for 0: 1-4 traverse
-    vector<int> traversalPoint;
-    vector<char> x(query.size(),'_');
-    //0:* 1:A 2:C 3:G 4:T 
-    for (int i=0; i<query.size(); i++){
-        if (query[i]!='A'&&query[i]!='T'&&query[i]!='C'&&query[i]!='G'){
-            traversalPoint.push_back(i);
-            x[i] = 'A';
-        }
-    }
-    sort(traversalPoint.begin(), traversalPoint.end());
-    while (true) {
-        for (int i=0; i<query.size(); i++) {
-            if (query[i]!='A'&&query[i]!='T'&&query[i]!='C'&&query[i]!='G') {
-                tempString.push_back(query[i]);
-            }
-            else {
-                tempString.push_back(x[i]);
-            }
-            
-        }
-        Clusterexp.push_back(tempString);
-        tempString = "";
-        //if over
-        
-        if(ascending(x,traversalPoint,traverseIndex))
-            break;
-    }
-    return expMotifs;
-}
-*/
 
 void Motif::locateMotif(const char T[]){
     //implement1 low efficiency
     bool flag = true;
     loci.clear();
-    //cout<<RegionSize<<endl;
     for (int i=0; i<RegionSize; i++) {
         for (int index=0; index<query.size(); index++) {
             if((query[index]!='N'&&T[i+index]!=query[index])||T[i+index]=='#'||T[i+index]=='N'){
@@ -97,7 +42,7 @@ inline int Motif::mapLoci(int genomePos,const vector<int>& StartPs){
         cerr<<genomePos<<endl;
         return 0;
     }
-    return EXTENDBOUND*(no_dist.first*2+1)+genomePos;   
+    return EXTEND_BOUND*(no_dist.first*2+1)+genomePos;   
 }
 
 
@@ -119,14 +64,14 @@ void Motif::testMotifTag(genomeRegions &gR,bool ifDraw){
             //int counter = loci.size();
             float totalAround=0;
             for (int i=0; i<loci.size(); i++) {
-                if (loci[i]<SAMPLESIZE*BINSPAN+SAMPLESIZE*offset+1||loci[i]>RegionSize-(SAMPLESIZE+1)*BINSPAN-SAMPLESIZE*offset+1) {
+                if (loci[i]<SAMPLESIZE*BIN_SPAN+SAMPLESIZE*OFF_SET+1||loci[i]>RegionSize-(SAMPLESIZE+1)*BIN_SPAN-SAMPLESIZE*OFF_SET+1) {
                     //counter--;
                     continue;
                 }
                 int thisLociCenter = mapLoci(loci[i],gR.segmentStartPos);
                 //cerr<<tag[thisLociCenter]<<" "<<thisLociCenter<<endl;
                 for (int l=0; l<2*SAMPLESIZE+1; l++) {
-                    for (int j=(l-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j<(l+1-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE); j++) {
+                    for (int j=(l-SAMPLESIZE)*BIN_SPAN+OFF_SET*(l-SAMPLESIZE); j<(l+1-SAMPLESIZE)*BIN_SPAN+OFF_SET*(l-SAMPLESIZE); j++) {
                         sumBin[l][t] += tag[thisLociCenter+j];
                     }
                 }
@@ -142,7 +87,6 @@ void Motif::testMotifTag(genomeRegions &gR,bool ifDraw){
                 //normalization for KL divergence
                 sumBin[i][t] /= totalAround;
             }
-            signalIntensity.push_back(totalAround/loci.size());
         }
     }
     for (int t=0; t<gR.tagName.size(); t++) {
@@ -157,7 +101,7 @@ void Motif::testMotifTag(genomeRegions &gR,bool ifDraw){
                 tempVec.push_back(sumBin[i][t]);
             }
             FFT tempFFT(tempVec);
-            tagNoise.push_back(tempFFT.denoise(int(SAMPLESIZE*5/8))*NOISEWEIGHT*sqrt(loci.size()));
+            tagNoise.push_back(tempFFT.denoise(int(SAMPLESIZE*5/8))*NOISE_WEIGHT*sqrt(loci.size()));
             /* smoothing */
             vector<float> tempBin;
             for (int i=0; i<SAMPLESIZE*2; i++) {
@@ -175,16 +119,16 @@ void Motif::testMotifTag(genomeRegions &gR,bool ifDraw){
             assymetry = testSymmety(tempVec);
         }
         float biPeak=fabsf(sumBin[SAMPLESIZE][t]*2);
-        for (int i=1; i<PEAKRANGE; i++) {
+        for (int i=1; i<PEAK_RANGE; i++) {
             float temp = fabsf(sumBin[SAMPLESIZE-i][t]+sumBin[SAMPLESIZE+i][t]);
             if (temp>biPeak) {
                 biPeak=temp;
             }
         }
-        tagBiPeak.push_back(biPeak*BIPEAKWEIGHT);
-        tagSymmetry.push_back(assymetry*SYMMETRYWEIGHT*sqrt(loci.size()));
+        tagBiPeak.push_back(biPeak*BIPEAK_WEIGHT);
+        tagSymmetry.push_back(assymetry*SYMMETRY_WEIGHT*sqrt(loci.size()));
         //cout<<sumMotif<<sumBin<<endl;
-        //cout<<tagName<<" "<<query<<" "<<sumMotif<<" "<<" "<<(2*BINSPAN+query.size()-1)<<" "<<sumMotif/counter/(2*BINSPAN+query.size()-1)<<endl;        
+        //cout<<tagName<<" "<<query<<" "<<sumMotif<<" "<<" "<<(2*BIN_SPAN+query.size()-1)<<" "<<sumMotif/counter/(2*BIN_SPAN+query.size()-1)<<endl;        
     }
     if (ifDraw) {
         string fileName = option["outdir"] + "/motif.dist";
@@ -199,7 +143,7 @@ void Motif::testMotifTag(genomeRegions &gR,bool ifDraw){
 void Motif::drawDist(genomeRegions& gR,ostream &distFile){    
     distFile<<">"<<query<<"_Tag_"<<gR.tagName<<"_Bipeak_"<<tagBiPeak<<"_symmetry_"<<tagSymmetry<<"\n";
     for (int l=0; l<2*SAMPLESIZE+1; l++) {
-        int pos = (l-SAMPLESIZE)*BINSPAN+offset*(l-SAMPLESIZE);
+        int pos = (l-SAMPLESIZE)*BIN_SPAN+OFF_SET*(l-SAMPLESIZE);
         distFile<<pos<<"\t";
         for (int t=0; t<gR.tagName.size(); t++) {
             distFile<<sumBin[l][t]<<"\t";
@@ -283,7 +227,6 @@ bool Motif::ascending(vector<char> &x,const vector<int> &traverseP,int &travInde
 //loci methods
 
 bool Motif::writeLoci(ostream &s,genomeRegions &gR){
-    //cerr<<query<<lociScore.size()<<" "<<loci.size()<<endl;
     assert(lociScore.size()==loci.size());
     string strand;
     int startP = 0;
@@ -331,33 +274,11 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
                 continue;
             }
             s<<chr<<"\t"<<startP<<"\t"<<endP<<"\t"<<strand<<"\t"<<lociScore[i]<<"\t";
-            //put two
-            /*
-            for (int i=0; i<tempM.tagBiPeak.size(); i++) {
-                s<<tempM.tagBiPeak[i]<<"\t";
-            }
-            for (int i=0; i<tempM.signalIntensity.size(); i++) {
-                s<<tempM.signalIntensity[i]<<"\t";
-            }
-            */ 
             s<<"\n";
             
         }
         
-/*        
-#ifndef WRITELOCIDIST
-#define WRITELOCIDIST
-        if (option["mode"]=="tag") {
-            for (int i=0; i<loci.size(); i++) {
-                ofstream specLociFile((option["outdir"]+"/specloci.dist").c_str(),ios::app);
-                ostringstream ss;
-                ss<<i;
-                lociScores[i].query="loci No."+ss.str();
-                lociScores[i].drawDist(gR, specLociFile);
-            }
-        }
-#endif
-*/        
+  
         
         //for roc
         if (option["ROC"]=="T") {
@@ -416,35 +337,6 @@ bool Motif::writeLoci(ostream &s,genomeRegions &gR){
                     }
                     rocFile<<scorethresh<<"\t"<<tempTP/float(TPFN)<<"\t"<<tempTP/float(tempTPFP)<<"\t"<<TN/float(TN+tempTPFP-tempTP)<<"\n";
                 }
-                
-                
-                // roc 3
-                
-                for (int i=0; i<lociScores.size(); i++) {
-                    lociScores[i].CountAndIntensity();
-                }
-                sort(lociScores.begin(), lociScores.end(), compareLoci());
-                tempIndex=0;
-                tempTP=0;
-                tempTPFP=0;
-                rocFile<<"count and intensity"<<"\n";
-                rocFile<<"thresh\tsensitivity\tprecision\tspecificity\n";
-                for (int scorethresh=int(lociScores[0].myScore+1); scorethresh>=int(lociScores.back().myScore-1); scorethresh--) {
-                    while (lociScores[tempIndex].myScore>(scorethresh-1)) {
-                        if (tempIndex>=lociScores.size()) {
-                            break;
-                        }   
-                        tempTPFP++;
-                        
-                        assert(lociScores[tempIndex].loci.size()==1);
-                        if (lociScores[tempIndex].TP) {
-                            tempTP++;
-                        }
-                        tempIndex++;
-                    }
-                    rocFile<<scorethresh<<"\t"<<tempTP/float(TPFN)<<"\t"<<tempTP/float(tempTPFP)<<"\t"<<TN/float(TN+tempTPFP-tempTP)<<"\n";
-                }
-                
 
             }
             option["ROC"]="F";
@@ -472,16 +364,16 @@ pair<float,int> Cluster::editDistance(const Motif& m){
     Cluster &cluster = (*this);
     float score = 1000;
     int optimShift = -100;
-    int bound = MAXSHIFT+1+cluster.query.size()-K;
-    for (int i=-MAXSHIFT; i<bound; i++) {
+    int bound = MAX_SHIFT+1+cluster.query.size()-K;
+    for (int i=-MAX_SHIFT; i<bound; i++) {
         //cout<<i<<cluster.query<<endl;
         //gap punish 2
         float tempScore = 0;
         if (i<0) {
             tempScore = -0.5*i;
         }
-        else if (i>=bound-MAXSHIFT) {
-            tempScore = 0.5*(MAXSHIFT-bound+i+1);
+        else if (i>=bound-MAX_SHIFT) {
+            tempScore = 0.5*(MAX_SHIFT-bound+i+1);
             //tempScore = K-cluster.query.size()+i;
         }
         for (int j=0; j<K; j++) {
@@ -501,14 +393,14 @@ pair<float,int> Cluster::editDistance(const Motif& m){
     // discard antisenses
     bool antiBetter = false;
     string anti(::antisense(m.query));
-    for (int i=-MAXSHIFT; i<bound; i++) {
+    for (int i=-MAX_SHIFT; i<bound; i++) {
         //cout<<i<<cluster.query<<endl;
         float tempScore = 0;
         if (i<0) {
             tempScore = -0.5*i;
         }
-        else if (i>=bound-MAXSHIFT) {
-            tempScore = 0.5*(MAXSHIFT-bound+i+1);
+        else if (i>=bound-MAX_SHIFT) {
+            tempScore = 0.5*(MAX_SHIFT-bound+i+1);
             //tempScore = K-cluster.query.size()+i;
         }
         for (int j=0; j<K; j++) {
@@ -562,15 +454,15 @@ void Cluster::concatenate(const Motif& m,int index,int optimShift){
     //extending cluster in back
     else {
         //marked as cluster
-        //offset = 1,2,3
-        int offset = -(query.size()-K-optimShift);
-        for (int j=0; j<K-offset; j++) {
+        //OFF_SET = 1,2,3
+        int OFF_SET = -(query.size()-K-optimShift);
+        for (int j=0; j<K-OFF_SET; j++) {
             if (query[j+optimShift]!=m.query[j]) {
                 query[j+optimShift]=degenerate(m.query[j],query[j+optimShift]);
             }
         }
         index = -1;
-        string temp(m.query.substr(K-offset,offset));
+        string temp(m.query.substr(K-OFF_SET,OFF_SET));
         query = query+temp;
     }
     //    cout<<query<<endl;
@@ -614,7 +506,7 @@ void Cluster::trim(){
     int start = 0;
     int end = query.size()-1;
     int maxPWM = sumPWM();
-    int trimMultiper = atoi(option["trim"].c_str());
+    int trimMultiper = 100 - atoi(option["trim"].c_str());
     while (trivial(start)||
            totalPWM[start]<maxPWM/trimMultiper||
            ((totalPWM[start]<maxPWM*2/trimMultiper)&&oligo(start))) {
@@ -634,7 +526,7 @@ void Cluster::trim(){
 }
 
 void Cluster::reCalSumBin(const Motif& m,const genomeRegions &gR){
-    //reCalsumBin and signalIntensity
+    //reCalsumBin
     for (int t=0; t<gR.tagName.size(); t++) {
         for (int l=0; l<2*SAMPLESIZE+1; l++) {
             sumBin[l][t]=(sumBin[l][t]*loci.size()+m.sumBin[l][t]*m.loci.size());
@@ -663,7 +555,7 @@ bool Cluster::trivial(int pos){
     */
     //all same
     for (int i=0; i<4; i++) {
-        //cerr<<*this<<endl<<PEUSUDOCOUNT<<endl;
+        //cerr<<*this<<endl<<PEUSUDO_COUNT<<endl;
         assert(totalPWM[pos]!=0);
         if (pwm[i][pos]/float(totalPWM[pos])>0.4)
             return false;
@@ -721,14 +613,14 @@ void Cluster::calPWM(const Motif& m,int optimShift){
     //extending cluster in back
     else {
         //marked as cluster
-        //offset = 1,2,3..
-        int offset = -(pwm[0].size()-K-optimShift);
-        for (int i=0; i<K-offset; i++) {
+        //OFF_SET = 1,2,3..
+        int OFF_SET = -(pwm[0].size()-K-optimShift);
+        for (int i=0; i<K-OFF_SET; i++) {
             for (int j=0; j<4; j++) {
                 pwm[j][i+optimShift] += m.pwm[j][i];
             }
         }
-        for (int i=K-offset; i<K; i++) {
+        for (int i=K-OFF_SET; i<K; i++) {
             for (int j=0; j<4; j++) {
                 pwm[j].push_back(m.pwm[j][i]) ;
             }
@@ -791,9 +683,6 @@ void Motif::printMotif(ostream &s){
         for (int i=0; i<tagNoise.size(); i++) {
             s<<tagNoise[i]<<"\t";
         }
-    }
-    for (int i=0; i<signalIntensity.size(); i++) {
-        s<<signalIntensity[i]<<"\t";
     }
     s<<loci.size()<<endl;
 }

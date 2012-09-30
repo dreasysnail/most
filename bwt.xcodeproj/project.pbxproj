@@ -10,9 +10,8 @@
 		7804869415A25F70003562B5 /* FFT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7804869315A25F70003562B5 /* FFT.cpp */; };
 		7827F91015694A27003EAF34 /* motif.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7827F90F15694A27003EAF34 /* motif.cpp */; };
 		7863919E156297C200850697 /* bwt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7863919D156297C200850697 /* bwt.cpp */; };
-		786391A615629AF100850697 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 786391A515629AF100850697 /* main.cpp */; };
 		7885A7EB1568B83200C5DE99 /* common.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7885A7EA1568B83200C5DE99 /* common.cpp */; };
-		A536A4D8143AAB5100A4F152 /* bwt.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = A536A4D7143AAB5100A4F152 /* bwt.1 */; };
+		78B67A981617E7F900F180DD /* most.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 78B67A971617E7F900F180DD /* most.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -22,7 +21,6 @@
 			dstPath = /usr/share/man/man1/;
 			dstSubfolderSpec = 0;
 			files = (
-				A536A4D8143AAB5100A4F152 /* bwt.1 in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
@@ -35,14 +33,12 @@
 		7827F91215694A33003EAF34 /* motif.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = motif.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		7863919D156297C200850697 /* bwt.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = bwt.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		786391A0156298C200850697 /* bwt.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = bwt.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		786391A515629AF100850697 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = main.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7885A7EA1568B83200C5DE99 /* common.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = common.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7885A7ED1568B84500C5DE99 /* common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = common.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		7885A7FE1568E86200C5DE99 /* temp.bed */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = temp.bed; sourceTree = "<group>"; };
-		7885A7FF1568E86200C5DE99 /* temp.fa */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = temp.fa; sourceTree = "<group>"; };
-		78ACBF771574A613003217D6 /* temp.wig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = temp.wig; sourceTree = "<group>"; };
+		78B67A941617E67500F180DD /* INSTALL */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = INSTALL; sourceTree = "<group>"; };
+		78B67A951617E67500F180DD /* README */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README; sourceTree = "<group>"; };
+		78B67A971617E7F900F180DD /* most.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = most.cpp; sourceTree = "<group>"; };
 		A536A4D1143AAB5100A4F152 /* bwt */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = bwt; sourceTree = BUILT_PRODUCTS_DIR; };
-		A536A4D7143AAB5100A4F152 /* bwt.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; lineEnding = 2; path = bwt.1; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -81,13 +77,11 @@
 				7827F90F15694A27003EAF34 /* motif.cpp */,
 				7827F91215694A33003EAF34 /* motif.h */,
 				786391A0156298C200850697 /* bwt.h */,
+				78B67A971617E7F900F180DD /* most.cpp */,
+				78B67A941617E67500F180DD /* INSTALL */,
+				78B67A951617E67500F180DD /* README */,
 				7804869315A25F70003562B5 /* FFT.cpp */,
 				7804869615A25F7B003562B5 /* FFT.h */,
-				A536A4D7143AAB5100A4F152 /* bwt.1 */,
-				7885A7FE1568E86200C5DE99 /* temp.bed */,
-				78ACBF771574A613003217D6 /* temp.wig */,
-				7885A7FF1568E86200C5DE99 /* temp.fa */,
-				786391A515629AF100850697 /* main.cpp */,
 			);
 			path = bwt;
 			sourceTree = "<group>";
@@ -143,10 +137,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				7863919E156297C200850697 /* bwt.cpp in Sources */,
-				786391A615629AF100850697 /* main.cpp in Sources */,
 				7885A7EB1568B83200C5DE99 /* common.cpp in Sources */,
 				7827F91015694A27003EAF34 /* motif.cpp in Sources */,
 				7804869415A25F70003562B5 /* FFT.cpp in Sources */,
+				78B67A981617E7F900F180DD /* most.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

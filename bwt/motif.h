@@ -1,6 +1,6 @@
 //
 //  motif.h
-//  bwt
+//  MOST
 //
 //  Created by zhang yizhe on 12-5-20.
 //  Copyright (c) 2012年 SJTU. All rights reserved.
@@ -35,7 +35,7 @@ class Motif{
     float motifProb;
     //each vector is a bin   sumBin[bin][tag]
     vector<float> sumBin[2*SAMPLESIZE+1];
-    vector<float> signalIntensity;
+    //vector<float> signalIntensity;
     //vector<int> expMotifs;
     //std::vector<string> Clusterexp;
     //conserve score;
@@ -46,10 +46,10 @@ class Motif{
     //index
     Motif(int i):index(i),overallScore(0),score(0),motifProb(0)
                 {query = translate(index);
-                pwm[0].assign(K, PEUSUDOCOUNT);
-                pwm[1].assign(K, PEUSUDOCOUNT);
-                pwm[2].assign(K, PEUSUDOCOUNT);
-                pwm[3].assign(K, PEUSUDOCOUNT);
+                pwm[0].assign(K, PEUSUDO_COUNT);
+                pwm[1].assign(K, PEUSUDO_COUNT);
+                pwm[2].assign(K, PEUSUDO_COUNT);
+                pwm[3].assign(K, PEUSUDO_COUNT);
                 }
     
     void locateMotif(const char T[]);
@@ -121,9 +121,8 @@ public:
     // problematic
     void CountAndBipeak(){
         myScore=counts+LogOnePlusX(tagBiPeak[0]+tagBiPeak[1]+tagBiPeak[2]);
-        //myScore=counts+(tagBiPeak[0]+tagBiPeak[1]+tagBiPeak[2])/600;
     }
-    void CountAndIntensity(){myScore=counts+(signalIntensity[0]+signalIntensity[1]+signalIntensity[2])/30000;}
+    //void CountAndIntensity(){myScore=counts+(signalIntensity[0]+signalIntensity[1]+signalIntensity[2])/30000;}
     int counts;
     float myScore;
     bool TP;
@@ -155,7 +154,7 @@ inline bool Motif::implicit(){
         return true;
     }
 }
-//remove TTTTTT TTATTT ATTTTT ATATAT
+//remove simple tandem repeat TTTTTT TTATTT ATTTTT ATATAT
 inline bool Motif::isRepeat(){
     int counter = 0;
     for (int i=1; i<K; i++) {
@@ -219,15 +218,6 @@ inline int Motif::wildcardNum(){
 }
  
 
-//m1>m2?
-/*
-class compareMotifHeap {
-public:
-    bool operator()(Motif lhs, Motif rhs){
-        return lhs.overallScorerhs.overallScore;
-    }
-};
-*/
 
 class compareMotif {
 public:
@@ -270,12 +260,6 @@ inline string Motif::translate(int query){
 ostream &operator<<( ostream &s, Motif &motif );
 //clustering
 inline void Cluster::appendLoci(const Motif& m){
-    //reCal insentity if tag
-    if (option["mode"]=="tag") {
-        for (int i=0; i<signalIntensity.size(); i++) {
-            signalIntensity[i] = (signalIntensity[i]*loci.size()+m.signalIntensity[i]*m.loci.size())/(loci.size()+m.loci.size());
-        }
-    }
     loci.insert(loci.end(),m.loci.begin(),m.loci.end());
 }
 inline void Cluster::addProb(const Motif& m,int prevSize){

@@ -1,6 +1,6 @@
 //
 //  common.cpp
-//  bwt
+//  MOST
 //
 //  Created by zhang yizhe on 12-5-20.
 //  Copyright (c) 2012年 SJTU. All rights reserved.
@@ -16,13 +16,13 @@ using namespace std;
 
 int K;
 float DELTA;
-int MAXSHIFT;
-float MAXDISTANCE;
-float MAXKLDIV;
-int MAXCLUSTERNUM;
-int MAXMOTIFNUM;
+int MAX_SHIFT;
+float MAX_DIST;
+float MAX_KL_DIV;
+int MAX_CLUSTER_NUM;
+int MAX_WORD_NUM;
 long int HASH_TABLE_SIZE;
-int PEUSUDOCOUNT;
+int PEUSUDO_COUNT;
 
 map<string,string> option;
 
@@ -55,13 +55,13 @@ void parseCommandLine(int argc,
     option          ["tagfile"]     =   "";
     optionRequire   ["tagfile"]     =   false;
     //
-    option          ["outdir"]      =   "mosh_out";
+    option          ["outdir"]      =   "MOST_out";
     optionRequire   ["outdir"]      =   false;
     //
     option          ["k"]      =   "9";
     optionRequire   ["k"]      =   false;
     //
-    option          ["order"]      =   "0";
+    option          ["order"]      =   "1";
     optionRequire   ["order"]      =   false;
     //
     option          ["writeloci"]      =  "T";
@@ -69,18 +69,18 @@ void parseCommandLine(int argc,
     //
     option          ["writeregion"]      =  "F";
     optionRequire   ["writeregion"]      =   false;
+    //if remove control
+    option          ["drawdist"]      =  "T";
+    optionRequire   ["drawdist"]      =   false;
     //
     option          ["bkgregion"]      =  "region";
     optionRequire   ["bkgregion"]      =   false;
     //
-    option          ["FFT"]      =  "T";
+    option          ["FFT"]      =  "F";
     optionRequire   ["FFT"]      =   false;
     //
     option          ["trim"]      =  "50";
     optionRequire   ["trim"]      =   false;
-    //
-    option          ["clusterlength"]      =  "20";
-    optionRequire   ["clusterlength"]      =   false;
     //
     option          ["clusterlength"]      =  "20";
     optionRequire   ["clusterlength"]      =   false;
@@ -94,11 +94,11 @@ void parseCommandLine(int argc,
     option          ["clusterStringency"]      =  "0.2";
     optionRequire   ["clusterStringency"]      =   false;
     //
-    option          ["maxclusternum"]      =  "10000000";
-    optionRequire   ["maxclusternum"]      =   false;
+    option          ["MAX_CLUSTER_NUM"]      =  "1000";
+    optionRequire   ["MAX_CLUSTER_NUM"]      =   false;
     //
-    option          ["maxmotifnum"]      =  "500";
-    optionRequire   ["maxmotifnum"]      =   false;
+    option          ["MAX_WORD_NUM"]      =  "1000";
+    optionRequire   ["MAX_WORD_NUM"]      =   false;
     //
     option          ["extend"]      =  "0";
     optionRequire   ["extend"]      =   false;
@@ -111,6 +111,7 @@ void parseCommandLine(int argc,
     //if remove control
     option          ["peusudo"]      =  "1";
     optionRequire   ["peusudo"]      =   false;
+
     // Parse the command line.
     string option_name = "";
     string option_value = "";
@@ -209,6 +210,12 @@ void parseCommandLine(int argc,
                     printAndExit("writeregion value should be either T or F");
                 }
             }
+            else if (option_name == "-drawdist"||option_name == "-dd") {
+                option["drawdist"] = option_value;
+                if (option["drawdist"]!="T"&&option["drawdist"]!="F") {
+                    printAndExit("drawdist value should be either T or F");
+                }
+            }
             else if (option_name == "-br") {
                 option["bkgregion"] = option_value;
             }
@@ -257,16 +264,16 @@ void parseCommandLine(int argc,
                 }
             }
             else if (option_name == "-cn") {
-                option["maxclusternum"] = option_value;
-                if (atoi(option["maxclusternum"].c_str())<2||
-                    atoi(option["maxclusternum"].c_str())>500) {
+                option["MAX_CLUSTER_NUM"] = option_value;
+                if (atoi(option["MAX_CLUSTER_NUM"].c_str())<2||
+                    atoi(option["MAX_CLUSTER_NUM"].c_str())>500) {
                     printAndExit("cluster num must be within [1,500]");
                 }
             }
             else if (option_name == "-mn") {
-                option["maxmotifnum"] = option_value;
-                if (atoi(option["maxmotifnum"].c_str())<2||
-                    atoi(option["maxmotifnum"].c_str())>20000) {
+                option["MAX_WORD_NUM"] = option_value;
+                if (atoi(option["MAX_WORD_NUM"].c_str())<2||
+                    atoi(option["MAX_WORD_NUM"].c_str())>20000) {
                     printAndExit("cluster num must be within [1,20000]");
                 }
             }
@@ -331,13 +338,13 @@ void parseCommandLine(int argc,
     K = atoi(option["k"].c_str());
     float stringency = atof(option["clusterStringency"].c_str());
     //for k=9   4-1   mismatch 4-1
-    MAXSHIFT = int(K*(1-stringency)/2.5+1);
-    MAXDISTANCE = K/3.0*(1-stringency)+1;
-    MAXKLDIV = float(0.001+0.004*(1-stringency));
+    MAX_SHIFT = int(K*(1-stringency)/2.5+1);
+    MAX_DIST = K/3.0*(1-stringency)+1;
+    MAX_KL_DIV = float(0.001+0.004*(1-stringency));
     DELTA = NormalCDFInverse(1.0-atof(option["pvalue"].c_str()))+1.0;
-    MAXMOTIFNUM = atoi(option["maxmotifnum"].c_str());
-    MAXCLUSTERNUM = atoi(option["maxclusternum"].c_str());
-    PEUSUDOCOUNT = atoi(option["peusudo"].c_str());
+    MAX_WORD_NUM = atoi(option["MAX_WORD_NUM"].c_str());
+    MAX_CLUSTER_NUM = atoi(option["MAX_CLUSTER_NUM"].c_str());
+    PEUSUDO_COUNT = atoi(option["peusudo"].c_str());
     cerr<<endl;
     
 }
@@ -345,38 +352,43 @@ void parseCommandLine(int argc,
 void printUsage()
 {
 	string usage =	"***********************************************************************************************\n";
-	usage		+=	"                             Mosh " + MOSHVERSION+"\n";
+	usage		+=	"                             MOST " + MOSTVERSION+"\n";
 	usage		+=	"                             Developed by Yizhe Zhang, Chaochun Wei\n";
 	usage		+=	"                             jeremy071242044@gmail.com\n";
 	usage		+=	"***********************************************************************************************\n\n";
-	usage		+=	"    mosh [option: <parameter1> <parameter2>]  \n\n";
+	usage		+=	"    ./most [option: <parameter1> <parameter2>]  \n\n";
     usage		+=	"    -h help                    Print help information.\n\n";
 	usage		+=	"    Required Parameters:\n\n";
 	usage		+=	"    -m <normal/tag/help>       Runing mode:tagfile should be specified if tag mode is selected\n\n";
 	usage		+=	"    -f <DNA sequence file>     Whole genome DNA sequences\n\n";
-    usage		+=	"    -rf <DNA sequence file>    Regional DNA sequences(using normal mode)\n\n";
+    //usage		+=	"    -rf <DNA sequence file>    Regional DNA sequences(using normal mode)\n\n";
     usage		+=	"    -b <BED file>              Regions of interest\n\n";
     usage		+=	"    -t <WIG file>              Tag file for Histone marks or other sources\n\n";
     //usage		+=	"    CAVEAT:WIG FILE SHOULD BE SORTED\n\n";
     usage		+=	"    Optional Parameters:\n\n";
      usage		+=	"    -c <BEG file>              Control file for ChIP-seq experiment\n\n";
-    usage		+=	"    -o <outputDIR>             Specify an output directory.\n\n";
-    usage		+=	"    -bo <0,1>                  Order for background sequence\n\n";
-    usage		+=	"    -br <region/genome>        Specify background sequence\n\n";
-    usage		+=	"    -locifile <T/F>            Whether or not loci file of each cluster should be exported\n\n";
-    usage		+=	"    -regionfile <T/F>          Whether or not region file of each cluster should be exported\n\n";
+    usage		+=	"    -o <outputDIR>             Specify an output directory(default MOST_out).\n\n";
+    usage		+=	"    -bo <0,1>                  Order for background sequence(default 0)\n\n";
+    usage		+=	"    -br <region/genome>        Specify background sequence(default region)\n\n";
+    usage		+=	"    -locifile <T/F>            Whether or not loci file of each cluster should be exported(default T)\n\n";
+    //usage		+=	"    -regionfile <T/F>          Whether or not region file of each cluster should be exported(default F)\n\n";
+    usage		+=	"    -drawdist <T/F>            Whether or not tag distribution file of each cluster should be exported(default T)\n\n";
     usage		+=	"    -fft <T/F>                 Whether or not to cast FFT on each bins(default T)\n\n";
     usage		+=	"    -trim <10-100 integer>     Larger trimer means larger length of cluster(default 50)\n\n";
-    usage		+=	"    -cl <4-30 integer>         maximal length of single cluster\n\n";
-    usage		+=	"    -p(-pvalue) <0-1 float>    P-value for low occurence word filtering\n\n";
-    usage		+=	"    -rmrepeat <0,1,2>            Whether or not to remove repeat words(default 1)\n\n";
-    usage		+=	"    -cs <0-1 float>            Stringency of clustering(default 0.05)\n\n";
-    usage		+=	"    -cn <1-500 integer>        maximal number of clusters(default 40)\n\n";
-    usage		+=	"    -mn <1-20000 integer>      maximal number of qualified motifs to be clustered(default 500)\n\n";
+    usage		+=	"    -cl <4-30 integer>         maximal length of single cluster(default 20)\n\n";
+    usage		+=	"    -p(-pvalue) <0-1 float>    P-value for low occurence word filtering(default 0.05)\n\n";
+    usage		+=	"    -rmrepeat <0,1,2>          Whether or not to remove repeat words(default 1)\n\n";
+    usage		+=	"    -cs <0-1 float>            Stringency of clustering(default 0.2)\n\n";
+    usage		+=	"    -cn <1-500 integer>        maximal number of clusters(default 1000)\n\n";
+    usage		+=	"    -mn <1-20000 integer>      maximal number of qualified words to be clustered(default 1000)\n\n";
     //usage		+=	"    Testing Parameters:\n\n";
     //usage		+=	"    -roc <T/F>                 Plot roc(default F)\n\n";
     usage		+=	"    -extend <1-20000 integer>  Extract extender(default 0)\n\n";
-    usage		+=	"    -ps <0-200 integer>        Peusudo count added on PFM\n\n";
+    usage		+=	"    -ps <0-200 integer>        Peusudo count added on PFM(default 1)\n\n";
+    usage               +=      "    Examples:\n\n";
+    usage		+=	"    ./most -m normal -r VDR-sti.chr3.bed -f chr3.fa.masked -o VDRnormal >VDR_normal.txt \n\n";
+
+
 	cerr<<usage<<endl;
 }
 
@@ -563,13 +575,8 @@ bool genomeRegions::readWig(const string &filename){
                     cout<<errorInfo;
                     continue;
                 }
-                //cout<<line<<currentChr<<endl;
-                
-                
-                
                 
                 rawTag[thistag][currentChr].assign(genomeLength[currentChr], 0);  
-                //cout<<currentChr<<genomeLength[currentChr]<<endl;
             }
         }
         
@@ -607,7 +614,6 @@ bool genomeRegions::catenateTags(){
     assert(regionTags.size()==0);
     for (int i=0; i<tagName.size(); i++) {
         for (vector<string>::iterator ChrIt=chromeNames.begin(); ChrIt!=chromeNames.end(); ChrIt++) {
-            //cerr<<regionTags[tagName[i]].size()<<" "<<rawTagSegments[tagName[i]][*ChrIt].size()<<endl;
             regionTags[tagName[i]].insert(regionTags[tagName[i]].end(),rawTagSegments[tagName[i]][*ChrIt].begin(), rawTagSegments[tagName[i]][*ChrIt].end());
             vector<short int> temp;
             rawTagSegments[tagName[i]][*ChrIt].swap(temp);
@@ -771,9 +777,7 @@ void genomeRegions::getSeq(const string& outPutDir){
 
     //chr1-chr19-chrX   iterator changed in it
     for (it = genomes.begin(); it!=genomes.end();) {
-        //cerr<<it->startP<<it->chr<<it->endP<<" "<<genomes.size()<<endl;
         appendSeq(regionFile,it);
-        //cerr<<it->startP<<it->chr<<it->endP<<" "<<genomes.size()<<endl;
     }
     //clear memory
     sort(chromeNames.begin(), chromeNames.end(),chrCompare);
@@ -840,7 +844,6 @@ int genomeRegions::appendReverseGenome(string& T){
     for (int i=segmentCount-1; i>=0; i--) {
         segmentStartPos.push_back(Halfway-segmentStartPos[i]+Halfway+1);
     }
-    //cout<<segmentStartPos.size()<<segmentStartPos<<endl;
     //extend segmentGenomePos
     for (int i=segmentCount-1; i>=0; i--) {
         segmentGenomePos.push_back(segmentGenomePos[i]);
@@ -855,7 +858,7 @@ int genomeRegions::appendReverseGenome(string& T){
     }
     T += antisense(T)+"#";
     cerr<<"regionSize:"<<T.size()<<endl;
-    //assert(offset<=MAX_LENGTH);
+    //assert(OFF_SET<=MAX_LENGTH);
     return T.size();
 }
 
@@ -919,7 +922,6 @@ void genomeRegions::getTagBed(const string& thistag,const string& currentChr){
     vector<genomeRegion>::iterator it;
     bool rear = false;
     for (it = genomes.begin(); it!=genomes.end(); it++) {
-        //cout<<thistag<<it->chr<<it->startP<<it->endP<<endl;
         if (it->chr!=currentChr) {
             if (rear) 
                 break;
@@ -939,20 +941,18 @@ void genomeRegions::getTagBed(const string& thistag,const string& currentChr){
 
 void genomeRegions::appendTag(int a,int b,const string& chr,const string& thistag){   
     try {
-        a -= EXTENDBOUND+1;
-        b += EXTENDBOUND;
+        a -= EXTEND_BOUND+1;
+        b += EXTEND_BOUND;
         int end=b;
         //assign this segment with 0
         if (b>genomeLength[chr]-1) {
             end=genomeLength[chr]-1;
         }
-        // cerr<<rawTagSegments[thistag][chr]<<" "<<a<<" "<<b<<endl;
         rawTagSegments[thistag][chr].insert(rawTagSegments[thistag][chr].end(),rawTag[thistag][chr].begin()+a, rawTag[thistag][chr].begin()+end);
-        // cerr<<rawTagSegments[thistag][chr].size()<<endl;
         if (end!=b) {
             vector<int> temp;
-            if (b-EXTENDBOUND>genomeLength[chr]-1) {
-                temp.assign(EXTENDBOUND, 0);
+            if (b-EXTEND_BOUND>genomeLength[chr]-1) {
+                temp.assign(EXTEND_BOUND, 0);
             }
             else {
                 temp.assign(b-end,0);
@@ -1316,6 +1316,17 @@ float symKLDiv(const vector<float> &lhs, const vector<float> &rhs){
         temp += lhs[t]*log10f((lhs[t]+SMALLNUM)/(rhs[t]+SMALLNUM))+rhs[t]*log10f((rhs[t]+SMALLNUM)/(lhs[t]+SMALLNUM));
     }
     return temp;
+}
+
+float normalization(vector<float>& fvec){
+    float total;
+    for (int i=0; i<fvec.size(); i++) {
+        total += fvec[i];
+    }
+    for (int i=0; i<fvec.size(); i++) {
+        fvec[i]/=total;
+    }
+    return total;
 }
 
 //statistic snippet implement from http://www.johndcook.com/cpp_phi.html by John D. Cook, revised a little bit 

@@ -1,6 +1,6 @@
 //
 //  FFT.h
-//  bwt
+//  MOST
 //
 //  Created by zhang yizhe on 12-7-3.
 //  Copyright (c) 2012年 SJTU. All rights reserved.

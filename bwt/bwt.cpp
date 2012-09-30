@@ -1,6 +1,6 @@
 //
 //  bwt.cpp
-//  bwt
+//  MOST
 //
 //  Created by zhang yizhe on 12-5-20.
 //  Copyright (c) 2012年 SJTU. All rights reserved.
@@ -435,22 +435,6 @@ void print_parents( ostream &s, int node)
 }
 
 
-istream &operator>>( istream &s, Buffer &b )
-{
-    s >> b.data;
-    assert( strlen( b.data ) < MAX_LENGTH );
-    b.N = strlen( b.data );
-    return s;
-}
-
-ostream &operator<<( ostream &s, Aux &a )
-{
-    if ( a.i == 256 )
-        s << "<EOF>";
-    else
-        s << (char) a.i;
-    return s;
-}
 
 ostream &operator<<( ostream &s, const Edge &edge )
 {
@@ -470,16 +454,5 @@ ostream &operator<<( ostream &s, const Edge &edge )
 }
 
 
-void Suffix::AddSuffixLink( int &last_parent, int parent)
-{
-    if ( last_parent > 0 ) {
-        cout << "Creating suffix link from node "
-        << last_parent
-        << " to node "
-        << parent
-        << ".\n";
-        Nodes[ last_parent ].suffix_node = parent;
-    }
-    last_parent = parent;
-}
+
 
