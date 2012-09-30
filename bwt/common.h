@@ -60,7 +60,7 @@ const string MOSHVERSION = "Version 1.3 (2012-9-9)";
 #define QUALIFIED
 #define CLUSTERLOG
 #define CHIPEDPEAKDIST
-#define QUALIFIEDPWM
+#define QUALIFIEDPFM
 
 //200M
 const long int MAX_LENGTH=int(3e6);

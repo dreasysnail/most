@@ -63,7 +63,7 @@ void parseCommandLine(int argc,
     option          ["order"]      =   "0";
     optionRequire   ["order"]      =   false;
     //
-    option          ["writeloci"]      =  "T";
+    option          ["writeloci"]      =  "F";
     optionRequire   ["writeloci"]      =   false;
     //
     option          ["writeregion"]      =  "F";
@@ -98,9 +98,12 @@ void parseCommandLine(int argc,
     //
     option          ["maxmotifnum"]      =  "500";
     optionRequire   ["maxmotifnum"]      =   false;
+    //if remove repeat
+    option          ["extendmotif"]      =  "T";
+    optionRequire   ["extendmotif"]      =   false;
     //
-    option          ["extend"]      =  "0";
-    optionRequire   ["extend"]      =   false;
+    option          ["flanking"]      =  "0";
+    optionRequire   ["flanking"]      =   false;
     //if remove repeat
     option          ["ROC"]      =  "F";
     optionRequire   ["ROC"]      =   false;
@@ -270,9 +273,15 @@ void parseCommandLine(int argc,
                 }
             }
             else if (option_name == "-extend") {
-                option["extend"] = option_value;
-                if (atoi(option["extend"].c_str())<2||
-                    atoi(option["extend"].c_str())>20000) {
+                option["extendmotif"] = option_value;
+                if (option["extendmotif"]!="T"&&option["extendmotif"]!="F") {
+                    printAndExit("Whether Extend motif should be either T or F");
+                }
+            }
+            else if (option_name == "-fl") {
+                option["flanking"] = option_value;
+                if (atoi(option["flanking"].c_str())<2||
+                    atoi(option["flanking"].c_str())>20000) {
                     printAndExit("extender must be within [1,20000]");
                 }
             }
@@ -358,7 +367,8 @@ void printUsage()
     usage		+=	"    -t <WIG file>              Tag file for Histone marks or other sources\n\n";
     //usage		+=	"    CAVEAT:WIG FILE SHOULD BE SORTED\n\n";
     usage		+=	"    Optional Parameters:\n\n";
-     usage		+=	"    -c <BEG file>              Control file for ChIP-seq experiment\n\n";
+    usage		+=	"    -c <BEG file>              Control file for ChIP-seq experiment\n\n";
+    usage       +=  "    -extend <T/F>              Whether or not to extend motif\n\n";
     usage		+=	"    -o <outputDIR>             Specify an output directory.\n\n";
     usage		+=	"    -bo <0,1>                  Order for background sequence\n\n";
     usage		+=	"    -br <region/genome>        Specify background sequence\n\n";
@@ -368,13 +378,13 @@ void printUsage()
     usage		+=	"    -trim <10-100 integer>     Larger trimer means larger length of cluster(default 50)\n\n";
     usage		+=	"    -cl <4-30 integer>         maximal length of single cluster\n\n";
     usage		+=	"    -p(-pvalue) <0-1 float>    P-value for low occurence word filtering\n\n";
-    usage		+=	"    -rmrepeat <0,1,2>            Whether or not to remove repeat words(default 1)\n\n";
+    usage		+=	"    -rmrepeat <0,1,2>          Whether or not to remove repeat words(default 1)\n\n";
     usage		+=	"    -cs <0-1 float>            Stringency of clustering(default 0.05)\n\n";
     usage		+=	"    -cn <1-500 integer>        maximal number of clusters(default 40)\n\n";
     usage		+=	"    -mn <1-20000 integer>      maximal number of qualified motifs to be clustered(default 500)\n\n";
     usage		+=	"    Testing Parameters:\n\n";
     usage		+=	"    -roc <T/F>                 Plot roc(default F)\n\n";
-    usage		+=	"    -extend <1-20000 integer>  Extract extender(default 0)\n\n";
+    usage		+=	"    -fl <1-20000 integer>  Extract extender(default 0)\n\n";
     usage		+=	"    -ps <0-200 integer>        Peusudo count added on PFM\n\n";
 	cerr<<usage<<endl;
 }

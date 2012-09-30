@@ -44,7 +44,7 @@ int main(int argc, char **argv)
 
     parseCommandLine(argc, argv);
 
-    genomeRegions *gR = new genomeRegions(atoi(option["extend"].c_str()));
+    genomeRegions *gR = new genomeRegions(atoi(option["flanking"].c_str()));
     
     //for test
     //test();
@@ -164,7 +164,7 @@ int main(int argc, char **argv)
                     continue;
                 }
                 counter1++;
-                //thisMotif.initPWM();
+                //thisMotif.initPFM();
                 //thisMotif.initLociScore();
                 if (option["mode"]=="tag"){
                     thisMotif.testMotifTag(*gR, false);
@@ -174,7 +174,7 @@ int main(int argc, char **argv)
                     MotifHeap.push(thisMotif);
                 }
                 if (MotifHeap.size()<MAXMOTIFNUM||thisMotif.overallScore>MotifHeap.top().overallScore) {
-                    //protocol:has pwm loci lociscore sign noise conscore motifProb overallscore.
+                    //protocol:has pfm loci lociscore sign noise conscore motifProb overallscore.
                     MotifHeap.push(thisMotif);
                     if (MotifHeap.size()>MAXMOTIFNUM) {
                         MotifHeap.pop();
@@ -213,13 +213,25 @@ int main(int argc, char **argv)
         
         
         //extend motif
-        while (!MotifHeap.empty())
-        {
-            Cluster temp0(Motif (1));
-            temp0.getExtended(MotifHeap.top(), *gR, active);
-            qualifiedMotifs.push_back(temp0);
-            MotifHeap.pop();
+        if (option["extendmotif"]=="T") {
+            while (!MotifHeap.empty())
+            {
+                Cluster temp0(Motif (1));
+                temp0.getExtended(MotifHeap.top(), *gR, active);
+                qualifiedMotifs.push_back(temp0);
+                MotifHeap.pop();
+            }
         }
+        else {
+            while (!MotifHeap.empty())
+            {
+                Cluster temp0(MotifHeap.top());
+                qualifiedMotifs.push_back(temp0);
+                MotifHeap.pop();
+            }
+        }
+        
+        
         
         //??
         delete [] Nodes;
@@ -241,15 +253,15 @@ int main(int argc, char **argv)
             qualifiedMotifs[i].drawDist(*gR, wordDist);
         } 
 #endif
-#ifdef QUALIFIEDPWM
-        //write pwm file;
-        ofstream pwmWordFile((option["outdir"]+"/qualified.pwm").c_str());
-        if (!pwmWordFile) {
-            printAndExit("Error! Fail to open pwmFile for writing!");
+#ifdef QUALIFIEDPFM
+        //write pfm file;
+        ofstream pfmWordFile((option["outdir"]+"/qualified.pfm").c_str());
+        if (!pfmWordFile) {
+            printAndExit("Error! Fail to open pfmFile for writing!");
         }
         for (int i = 0; i<qualifiedMotifs.size(); i++) {
-            printProgress(i,qualifiedMotifs.size(), "Generate PWM file for qualified words");
-            pwmWordFile<<qualifiedMotifs[i];
+            printProgress(i,qualifiedMotifs.size(), "Generate PFM file for qualified words");
+            pfmWordFile<<qualifiedMotifs[i];
         }
 #endif
 #ifdef CHIPEDPEAKDIST
@@ -303,59 +315,24 @@ int main(int argc, char **argv)
                     continue;
                 }
                 else if (aligned) {
-                    int queryLength = clusters[j].pwm[0].size();
+                    int queryLength = clusters[j].pfm[0].size();
                     //if cluster size exceed Max cluster size after this motif appended,discard
                     if (queryLength>=atoi(option["clusterlength"].c_str())&&(dist_shift.second<0||dist_shift.second+K>queryLength)) {
                         exceedLengthCount++;
                         goto nextMotif;
                     }
-                    //write cluster file
-#ifdef CLUSTERLOG
-                    if (option["mode"]=="tag"){
-                        clusterFile<<i<<setw(8)<<"\t";
-                        if (dist_shift.second>=0) {
-                            for (int counter=0; counter<dist_shift.second; counter++) {
-                                clusterFile<<" ";
-                            }
-                        }
-                        clusterFile<<" "<<qualifiedMotifs[i].query;
-                        clusterFile<<qualifiedMotifs[i].tagBiPeak<<qualifiedMotifs[i].tagSymmetry<<clusters[j].signalIntensity<<"dist"<<dist_shift.first<<"shift"<<dist_shift.second<<"\n";
-                        clusterFile<<j<<setw(8)<<"\t";
-                        if (dist_shift.second<0) {
-                            for (int counter=0; counter<abs(dist_shift.second); counter++) {
-                                clusterFile<<" ";
-                            }
-                        }
-                        clusterFile<<" "<<clusters[j].query<<clusters[j].tagBiPeak<<clusters[j].tagSymmetry<<clusters[j].signalIntensity<<"KL div"<<KLDiv<<endl;
-                    } 
-                    else {
-                        clusterFile<<i<<setw(8)<<"\t";
-                        if (dist_shift.second>=0) {
-                            for (int counter=0; counter<dist_shift.second; counter++) {
-                                clusterFile<<" ";
-                            }
-                        }
-                        clusterFile<<" "<<qualifiedMotifs[i].query;
-                        clusterFile<<"\tdist"<<dist_shift.first<<"\tshift"<<dist_shift.second<<"\n";
-                        clusterFile<<j<<setw(8)<<"\t";
-                        if (dist_shift.second<0) {
-                            for (int counter=0; counter<abs(dist_shift.second); counter++) {
-                                clusterFile<<" ";
-                            }
-                        }
-                        clusterFile<<" "<<clusters[j].query<<endl;
-                    }
-#endif               
+                    Member tempM ={dist_shift.second,qualifiedMotifs[i].tagBiPeak,qualifiedMotifs[i].tagSymmetry,dist_shift.first,qualifiedMotifs[i].query};
+                    clusters[j].Members.push_back(tempM);
+              
                     normalAligned++;
                    
-                    //clusters[j].concatenate(qualifiedMotifs[i],i,dist_shift.second);
                     //recalculate four attributes
-                    clusters[j].calPWM(qualifiedMotifs[i], dist_shift.second);
+                    clusters[j].calPFM(qualifiedMotifs[i], dist_shift.second);
                     if (option["mode"]=="tag"){
                         clusters[j].reCalSumBin(qualifiedMotifs[i], *gR);
                     }
                     clusters[j].appendLoci(qualifiedMotifs[i]);
-                    clusters[j].mergeProb(qualifiedMotifs[i]);
+                    //clusters[j].mergeProb(qualifiedMotifs[i]);
                     //update noise and tagscore
                     clusters[j].testMotifTag(*gR,false);
                     clusters[j].sumOverallScore();
@@ -401,6 +378,8 @@ int main(int argc, char **argv)
         nextMotif:
             continue;
         }
+        
+
     
         //calculating
         for (int j=0; j<clusters.size(); j++){
@@ -412,6 +391,16 @@ int main(int argc, char **argv)
             //clusters[j].calConscore(RegionSize);
             clusters[j].sumOverallScore();
         }
+        
+//write cluster file
+#ifdef CLUSTERLOG
+        clusterFile<<"\n";
+        for (int j=0; j<clusters.size(); j++){
+            clusterFile<<setw(8)<<"CLUSTER\t"<<setw(3)<<j<<"\t";
+            clusters[j].printMember(clusterFile);
+        }
+#endif
+        
         sort(clusters.begin(),clusters.end(),compareMotif());
         t4=clock();
         cerr<<"clustering:"<<double((t4-t3)/1e6)<<endl;
@@ -454,19 +443,19 @@ int main(int argc, char **argv)
             clusters[i].printMotif(cout);
         }
         
-        //write pwm file;
-        fileName = outPutDir + "/allmotif.pwm";
-        ofstream pwmFile(fileName.c_str());
-        if (!pwmFile) {
-            printAndExit("Error! Fail to open pwmFile for writing!");
+        //write pfm file;
+        fileName = outPutDir + "/allmotif.pfm";
+        ofstream pfmFile(fileName.c_str());
+        if (!pfmFile) {
+            printAndExit("Error! Fail to open pfmFile for writing!");
         }
         for (int i = 0; i<clusters.size(); i++) {
-            printProgress(i,clusters.size(), "Generate PWM file");
-            pwmFile<<clusters[i];
+            printProgress(i,clusters.size(), "Generate PFM file");
+            pfmFile<<clusters[i];
             
             
         }            
-        //write pwm and dist
+        //write pfm and dist
         
         tEnd=clock();
         cerr<<"total time eclapse:"<<double((tEnd-tStart)/1e6)<<endl;
@@ -567,19 +556,11 @@ void test(){
     Motif m1(1),m2(2);
     for (int j=0; j<6; j++) {
         for (int i=0; i<4; i++) {
-            m1.pwm[i][j]=a[i][j];
-            m2.pwm[i][j]=b[i][j];
+            m1.pfm[i][j]=a[i][j];
+            m2.pfm[i][j]=b[i][j];
         }
     }
-    cerr<<m1.PearsonCorrPWM(m2, 0, 6, false)<<endl;
-    
-    
-   
-    
-    
-
-    
-    
+    cerr<<m1.PearsonCorrPFM(m2, 0, 6, false)<<endl;
     assert(0==1);
 }
 

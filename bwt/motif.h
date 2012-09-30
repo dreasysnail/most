@@ -29,7 +29,7 @@ class Motif{
     string query;
     //char alp2num(query[i-1])[K];
     int index;
-    vector<int> pwm[4];
+    vector<int> pfm[4];
     //bool overThresh;
     vector<int> loci;
     vector<float> tagBiPeak;
@@ -48,28 +48,29 @@ class Motif{
     //index
     Motif(int i):index(i),overallScore(0),score(0),motifProb(0)
                 {query = index2Str(index);
-                pwm[0].assign(K, PEUSUDOCOUNT);
-                pwm[1].assign(K, PEUSUDOCOUNT);
-                pwm[2].assign(K, PEUSUDOCOUNT);
-                pwm[3].assign(K, PEUSUDOCOUNT);
+                pfm[0].assign(K, PEUSUDOCOUNT);
+                pfm[1].assign(K, PEUSUDOCOUNT);
+                pfm[2].assign(K, PEUSUDOCOUNT);
+                pfm[3].assign(K, PEUSUDOCOUNT);
                 }
     Motif(string i):query(i),overallScore(0),score(0),motifProb(0)
                 {index = str2index(query);
-                pwm[0].assign(K, PEUSUDOCOUNT);
-                pwm[1].assign(K, PEUSUDOCOUNT);
-                pwm[2].assign(K, PEUSUDOCOUNT);
-                pwm[3].assign(K, PEUSUDOCOUNT);
+                pfm[0].assign(K, PEUSUDOCOUNT);
+                pfm[1].assign(K, PEUSUDOCOUNT);
+                pfm[2].assign(K, PEUSUDOCOUNT);
+                pfm[3].assign(K, PEUSUDOCOUNT);
                 }
     
     void locateMotif(const char T[]);
     inline int mapLoci(int genomePos,const vector<int>& tag);
+    void CalSumBin(genomeRegions &gR);
     void testMotifTag(genomeRegions &gR,bool ifDraw);
     void drawDist(genomeRegions& gR,ostream &distFile);
     void initBin(genomeRegions &gR);
     //order 0 order 1 
     void initProb(const genomeRegions& gR,int order);
-    void initPWM();
-    //void calPWM(const vector<Motif>& allmotifs);
+    void initPFM();
+    //void calPFM(const vector<Motif>& allmotifs);
     void calConscore(int nSize){
         //protocol: motifProb loci
         if (loci.size()>motifProb*nSize*DELTA)
@@ -100,24 +101,35 @@ class Motif{
     void printMotif(ostream &s);  
     inline string index2Str(int i);
     inline int str2index(string &i);
-    //pwm
-    float PearsonCorrPWM(const Motif &m,int offset,int clustersize,bool strand);
+    //pfm
+    float PearsonCorrPFM(const Motif &m,int offset,int clustersize,bool strand);
     void generateIUPAC();
-    //sumpwm for trim
-    vector<int> totalPWM;
-    int sumPWM();
+    //sumpfm for trim
+    vector<int> totalPFM;
+    int sumPFM();
 
 
 };
 
+struct Member{
+    int shift;
+    std::vector<float> tagBiPeak;
+    std::vector<float> tagSymmetry;
+    float dist;
+    string query;
+};
+
 class Cluster: public Motif{
 public:
-    Cluster(const Motif &m):Motif(m){index=-1;sumPWM();};
+    Cluster(const Motif &m):Motif(m){index=-1;
+                                     sumPFM();
+                                     Member tempM ={0,m.tagBiPeak,m.tagSymmetry,0,m.query};
+                                     Members.push_back(tempM);};
     inline void addProb(const Motif& m,int prevSize);
     void concatenate(const Motif& m,int index ,int optimShift);
     std::pair<float,int> editDistance(const Motif& m);
     float tagDistrDistance(const Motif& m);
-    void calPWM(const Motif& m,int optimShift);
+    void calPFM(const Motif& m,int optimShift);
     inline void appendLoci(const Motif& m);
     void reCalSumBin(const Motif& m,const genomeRegions &gR);
     void mergeLoci();
@@ -128,6 +140,9 @@ public:
     void writeCLusterLog(ostream &s,const Motif& m);
     //get extension from word m
     void getExtended(const Motif &m, genomeRegions &gR, Suffix & active);
+    //motif member
+    vector<Member> Members;
+    void printMember(ostream &s);
 };
 
 //temp roc ploting
@@ -292,7 +307,7 @@ inline int Motif::str2index(string &query){
 }
 
 
-//print pwm to stream
+//print pfm to stream
 ostream &operator<<( ostream &s, Motif &motif );
 //clustering
 inline void Cluster::appendLoci(const Motif& m){
