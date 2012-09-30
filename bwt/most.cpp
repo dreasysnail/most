@@ -1,7 +1,7 @@
 
 //
-//  main.cpp
-//  bwt
+//  most.cpp
+//  MOST
 //
 //  Created by icarus on 12-5-10.
 //  Copyright 2012年 sjtu. All rights reserved.
@@ -106,7 +106,7 @@ int main(int argc, char **argv)
             for (int i=0; i<gR->tagName.size(); i++) {
                 cerr<<gR->tagName[i]<<" size:"<<gR->regionTags[gR->tagName[i]].size()<<"\t";
                 cerr<<long(gR->regionTags[gR->tagName[i]].size())-EXTEND_BOUND*4*gR->segmentCount<<endl;
-                assert(RegionSize==long(gR->regionTags[gR->tagName[i]].size())-EXTENDBOUND*4*gR->segmentCount);
+                assert(RegionSize==long(gR->regionTags[gR->tagName[i]].size())-EXTEND_BOUND*4*gR->segmentCount);
             }
         }
         cerr<<"RegionSize:"<<RegionSize<<endl;
@@ -159,10 +159,10 @@ int main(int argc, char **argv)
                 if (counter1==1) {
                     MotifHeap.push(thisMotif);
                 }
-                if (MotifHeap.size()<MAXMOTIFNUM||thisMotif.overallScore>MotifHeap.top().overallScore) {
+                if (MotifHeap.size()<MAX_WORD_NUM||thisMotif.overallScore>MotifHeap.top().overallScore) {
                     //has pwm loci lociscore sign noise conscore motifProb overallscore.
                     MotifHeap.push(thisMotif);
-                    if (MotifHeap.size()>MAXMOTIFNUM) {
+                    if (MotifHeap.size()>MAX_WORD_NUM) {
                         MotifHeap.pop();
                     }
                 }
@@ -193,9 +193,9 @@ int main(int argc, char **argv)
         int exceedLengthCount = 0;
         int inverseAlignedCount = 0;
         int normalAligned = 0;
-        int maxMotifSize=min(MAXMOTIFNUM, int(MotifHeap.size()));
+        int maxMotifSize=min(MAX_WORD_NUM, int(MotifHeap.size()));
         vector<Motif> qualifiedMotifs;
-        qualifiedMotifs.reserve(MAXMOTIFNUM);
+        qualifiedMotifs.reserve(MAX_WORD_NUM);
         while (!MotifHeap.empty())
         {
             qualifiedMotifs.push_back(MotifHeap.top());
@@ -241,12 +241,12 @@ int main(int argc, char **argv)
                 pair<float,int> dist_shift = clusters[j].editDistance(qualifiedMotifs[i]);
                 if (option["mode"]=="tag"){
                     KLDiv = clusters[j].tagDistrDistance(qualifiedMotifs[i]);
-                    if (fabs(dist_shift.first)<=MAXDISTANCE&&KLDiv<=MAXKLDIV) {
+                    if (fabs(dist_shift.first)<=MAX_DIST&&KLDiv<=MAX_KL_DIV) {
                         aligned = true;
                     }
                 }
                 else {
-                    if (fabs(dist_shift.first)<=MAXDISTANCE) {
+                    if (fabs(dist_shift.first)<=MAX_DIST) {
                         aligned = true;
                     }
                 }
@@ -277,14 +277,14 @@ int main(int argc, char **argv)
                             }
                         }
                         clusterFile<<" "<<qualifiedMotifs[i].query;
-                        clusterFile<<qualifiedMotifs[i].tagBiPeak<<qualifiedMotifs[i].tagSymmetry<<clusters[j].signalIntensity<<"dist"<<dist_shift.first<<"shift"<<dist_shift.second<<"\n";
+                        clusterFile<<qualifiedMotifs[i].tagBiPeak<<qualifiedMotifs[i].tagSymmetry<<"dist"<<dist_shift.first<<"shift"<<dist_shift.second<<"\n";
                         clusterFile<<j<<setw(8)<<"\t";
                         if (dist_shift.second<0) {
                             for (int counter=0; counter<abs(dist_shift.second); counter++) {
                                 clusterFile<<" ";
                             }
                         }
-                        clusterFile<<" "<<clusters[j].query<<clusters[j].tagBiPeak<<clusters[j].tagSymmetry<<clusters[j].signalIntensity<<"KL div"<<KLDiv<<endl;
+                        clusterFile<<" "<<clusters[j].query<<clusters[j].tagBiPeak<<clusters[j].tagSymmetry<<"KL div"<<KLDiv<<endl;
                     } 
                     else {
                         clusterFile<<i<<setw(8)<<"\t";
@@ -325,7 +325,7 @@ int main(int argc, char **argv)
                 }
                 //for test: cluster system not aligned by tag
 #ifdef CLUSTERLOG   
-                else if (dist_shift.first>0&&dist_shift.first<=MAXDISTANCE&&KLDiv>MAXKLDIV){
+                else if (dist_shift.first>0&&dist_shift.first<=MAX_DIST&&KLDiv>MAX_KL_DIV){
                     if (option["mode"]=="tag"){
                         clusterFile<<"KLDIV not consistent:"<<"\n";
                         clusterFile<<i<<setw(8)<<"\t";
@@ -353,7 +353,7 @@ int main(int argc, char **argv)
 
             }
             //if not aligned to any cluster, new cluster
-            if (clusters.size()<MAXCLUSTERNUM){
+            if (clusters.size()<MAX_CLUSTER_NUM){
                 qualifiedMotifs[i].index = -1;
                 clusterFile<<"+new cluster: "<<i<<" "<<qualifiedMotifs[i].query<<endl;
                 Cluster temp0(qualifiedMotifs[i]);
@@ -367,7 +367,7 @@ int main(int argc, char **argv)
         for (int j=0; j<clusters.size(); j++){
             clusters[j].trim(); 
             clusters[j].mergeLoci();
-            clusters[j].testMotifTag(*gR,true);
+            clusters[j].testMotifTag(*gR,option["drawdist"]=="T");
             clusters[j].calConscore(RegionSize);
             clusters[j].sumOverallScore();
         }

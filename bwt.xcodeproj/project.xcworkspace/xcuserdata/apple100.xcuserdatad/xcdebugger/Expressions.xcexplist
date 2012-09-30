@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VariablesViewState
+   version = "1.0">
+   <ContextStates>
+      <ContextState
+         contextName = "AddPrefix(Suffix&amp;, int):bwt.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "N">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "genomeRegions::appendSeq(std::ostream&amp;, __gnu_cxx::__normal_iterator&lt;genomeRegion*, std::vector&lt;genomeRegion, std::allocator&lt;genomeRegion&gt; &gt; &gt;&amp;):common.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "this-&gt;genomes[1]">
+            </PersistentString>
+            <PersistentString
+               value = "*currentGenomeRegion">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "main:main.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "motif">
+            </PersistentString>
+            <PersistentString
+               value = "K">
+            </PersistentString>
+            <PersistentString
+               value = "N">
+            </PersistentString>
+            <PersistentString
+               value = "Edges">
+            </PersistentString>
+            <PersistentString
+               value = "MotifHeap">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "Edge::Remove():bwt.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "first_char_index">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "fillMotif(int):motif.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "motif[query]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "Cluster::mergeLoci():motif.cpp">
+      </ContextState>
+      <ContextState
+         contextName = "Suffix::traverseLoci(int, int):bwt.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "Nodes[edge.end_node]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "Suffix::countString(std::string const&amp;):bwt.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "Nodes[tempEdge.end_node]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "Edge::SplitEdge(Suffix&amp;):bwt.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "Nodes[5]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "Motif::PearsonCorrPWM(Motif const&amp;, int, int, bool):motif.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "pwm[nucleotide][i+offset]">
+            </PersistentString>
+            <PersistentString
+               value = "m.pwm[3-nucleotide][pwmsize-i]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "genomeRegions::callOverLaps(std::vector&lt;Interval, std::allocator&lt;Interval&gt; &gt;&amp;):common.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "intervalLib[i]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "symKLDiv(std::vector&lt;float, std::allocator&lt;float&gt; &gt; const&amp;, std::vector&lt;float, std::allocator&lt;float&gt; &gt; const&amp;):common.cpp">
+         <PersistentStrings>
+            <PersistentString
+               value = "lhs[t]">
+            </PersistentString>
+            <PersistentString
+               value = "rhs[t]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+   </ContextStates>
+</VariablesViewState>
