@@ -10,9 +10,8 @@
 		782E7B7B15E49BC200161BAD /* bwt.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 782E7B7215E49BC200161BAD /* bwt.cpp */; };
 		782E7B7C15E49BC200161BAD /* common.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 782E7B7415E49BC200161BAD /* common.cpp */; };
 		782E7B7D15E49BC200161BAD /* FFT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 782E7B7615E49BC200161BAD /* FFT.cpp */; };
-		782E7B7E15E49BC200161BAD /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 782E7B7815E49BC200161BAD /* main.cpp */; };
+		782E7B7E15E49BC200161BAD /* most.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 782E7B7815E49BC200161BAD /* most.cpp */; };
 		782E7B7F15E49BC200161BAD /* motif.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 782E7B7915E49BC200161BAD /* motif.cpp */; };
-		A536A4D8143AAB5100A4F152 /* bwt.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = A536A4D7143AAB5100A4F152 /* bwt.1 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -22,7 +21,6 @@
 			dstPath = /usr/share/man/man1/;
 			dstSubfolderSpec = 0;
 			files = (
-				A536A4D8143AAB5100A4F152 /* bwt.1 in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
@@ -35,14 +33,12 @@
 		782E7B7515E49BC200161BAD /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = common.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		782E7B7615E49BC200161BAD /* FFT.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FFT.cpp; sourceTree = "<group>"; };
 		782E7B7715E49BC200161BAD /* FFT.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FFT.h; sourceTree = "<group>"; };
-		782E7B7815E49BC200161BAD /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = main.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		782E7B7815E49BC200161BAD /* most.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = most.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		782E7B7915E49BC200161BAD /* motif.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = motif.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		782E7B7A15E49BC200161BAD /* motif.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = motif.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
-		7885A7FE1568E86200C5DE99 /* temp.bed */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = temp.bed; sourceTree = "<group>"; };
-		7885A7FF1568E86200C5DE99 /* temp.fa */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = temp.fa; sourceTree = "<group>"; };
-		78ACBF771574A613003217D6 /* temp.wig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = temp.wig; sourceTree = "<group>"; };
+		78A6785A1617F10700F03EA6 /* INSTALL */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = INSTALL; sourceTree = "<group>"; };
+		78A6785B1617F10700F03EA6 /* README */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README; sourceTree = "<group>"; };
 		A536A4D1143AAB5100A4F152 /* bwt */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = bwt; sourceTree = BUILT_PRODUCTS_DIR; };
-		A536A4D7143AAB5100A4F152 /* bwt.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; lineEnding = 2; path = bwt.1; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,14 +76,12 @@
 				782E7B7415E49BC200161BAD /* common.cpp */,
 				782E7B7515E49BC200161BAD /* common.h */,
 				782E7B7615E49BC200161BAD /* FFT.cpp */,
+				78A6785A1617F10700F03EA6 /* INSTALL */,
+				78A6785B1617F10700F03EA6 /* README */,
 				782E7B7715E49BC200161BAD /* FFT.h */,
-				782E7B7815E49BC200161BAD /* main.cpp */,
+				782E7B7815E49BC200161BAD /* most.cpp */,
 				782E7B7915E49BC200161BAD /* motif.cpp */,
 				782E7B7A15E49BC200161BAD /* motif.h */,
-				A536A4D7143AAB5100A4F152 /* bwt.1 */,
-				7885A7FE1568E86200C5DE99 /* temp.bed */,
-				78ACBF771574A613003217D6 /* temp.wig */,
-				7885A7FF1568E86200C5DE99 /* temp.fa */,
 			);
 			path = bwt;
 			sourceTree = "<group>";
@@ -145,7 +139,7 @@
 				782E7B7B15E49BC200161BAD /* bwt.cpp in Sources */,
 				782E7B7C15E49BC200161BAD /* common.cpp in Sources */,
 				782E7B7D15E49BC200161BAD /* FFT.cpp in Sources */,
-				782E7B7E15E49BC200161BAD /* main.cpp in Sources */,
+				782E7B7E15E49BC200161BAD /* most.cpp in Sources */,
 				782E7B7F15E49BC200161BAD /* motif.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

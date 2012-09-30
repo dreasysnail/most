@@ -1,0 +1,73 @@
+*****************************************************************
+						Introduction
+*****************************************************************
+MOST is a fast MOTIF finding tool(MOtif finding by Suffix tree and heterogeneous Tags). MOST+ is faster than existing motif finding algorithms to our knowledge by taking advantage of suffix tree. It also use heterogeneous information, like histone modification or DNase I sensitivity, to help detect motif, thus rendering a higher level of accuracy. 
+
+For installation, check INSTALL contained in this package.
+
+COMMANDLINE ARGUMENTS:
+
+most [-someidentifier value1 value2 ...]  
+
+    -h help                    Print help information.
+
+    Required Parameters:
+
+    -m <normal/tag/help>       Normal mode use only genomic information to discover motif. Tag mode use additional genome-wide signatures.
+							   NOTE: tagfile should be specified if tag mode is selected(default normal)
+
+    -f <DNA sequence file>     Genome DNA sequences
+
+    -b <BED file>              Regions of interest, like ChIP-Seq peaks or promotor regions
+
+    -t <WIG file>              Tag file for Histone marks or DNase I sensitivity
+-----------------------------------------------------------------
+    Optional Parameters:
+	
+	1）I/O
+
+    -o <outputDIR>             Specify an output directory(default MOST_out).
+	
+	-locifile <T/F>            Whether loci file of each cluster should be exported(default T)
+	
+	-drawdist <T/F>            Whether tag distribution file of each cluster should be exported(default T)
+	
+	-c <BEG file>              Control file for ChIP-seq experiment(default NONE)
+	
+	2) Finding over-represented words 
+	
+    -bo <0,1>                  Order for background sequence(default 1)
+
+    -br <region/genome>        Specify background sequence(default region)
+    
+	-rmrepeat <0,1,2>          Whether to remove repeat words(default 1)
+							   0: No removal 1: remove words contains only 1 nucleotide(i.e. AAAAAAAAA) 2: remove words like AAAAAAAAA, ATATATATA, 								  AAAATAAAA...
+	
+	-p(-pvalue) <0-1 float>    P-value for low occurence word filtering(default 0.05)
+	
+	-mn <1-20000 integer>      maximal number of qualified motifs to be clustered(default 500)
+	
+    -extend <1-20000 integer>  Extend the region of interest in both side with * bp (default 0)
+
+    -ps <0-200 integer>        Peusudo count added on PFM(default 1)
+	
+	3) Clustering words
+
+    -trim <10-100 integer>     Whether to remove the ambiguous ends of motif, bigger trimmer means more strict triming(default 50)
+
+    -cl <4-30 integer>         maximal length of single cluster(default 20)
+
+    -cs <0-1 float>            Stringency of clustering, big stringency value means more strict clustering(default 0.2)
+
+    -cn <1-500 integer>        maximal number of clusters(default 1000)
+	
+	4) FFT
+	
+	-fft <T/F>                 Whether to cast FFT on tag signal distribution(default T)
+							   NOTE: This option should only be checked if tag mode is on.
+	
+
+	
+ 
+
+
