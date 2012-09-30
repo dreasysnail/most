@@ -1,6 +1,6 @@
 //
 //  bwt.cpp
-//  bwt
+//  MOST
 //
 //  Created by zhang yizhe on 12-5-20.
 //  Copyright (c) 2012年 SJTU. All rights reserved.
@@ -8,8 +8,8 @@
 //
 // Suffix tree creation
 //
-// we thank Mark Nelson for his open source
-// implement of Ukekknon algorithm
+// We thank Mark Nelson for his open source
+// implementation of Ukekknon algorithm!
 //
 //
 
@@ -125,7 +125,7 @@ void Edge::Remove()
         i = ++i % HASH_TABLE_SIZE;
     for ( ; ; ) {
         Edges[ i ].start_node = -1;
-        int j = i;
+        long int j = i;
         for ( ; ; ) {
             i = ++i % HASH_TABLE_SIZE;
             if ( Edges[ i ].start_node == -1 )
@@ -190,52 +190,11 @@ int Edge::SplitEdge( Suffix &s )
     Insert();
     Nodes[end_node].father=start_node;
     
-        
- 
-    //update leaf counts from current node to 0
-    
-    /*
-      Nodes[new_edge->end_node].leaf_count_beneath++;
-    int fatherNode=s.origin_node;
-    
-    while (fatherNode!=0) {
-        Nodes[fatherNode].leaf_count_beneath++;
-        fatherNode = Nodes[fatherNode].father;
-    }
-    */
-    
     return start_node;
     //
 }
 
 
-/*
-
-void dump_edges( int current_n )
-{
-    cout << " Start  End  Suf  First Last  String\n";
-    for ( int j = 0 ; j < HASH_TABLE_SIZE ; j++ ) {
-        Edge *s = Edges + j;
-        if ( s->start_node == -1 )
-            continue;
-        cout << setw( 5 ) << s->start_node << " "
-        << setw( 5 ) << s->end_node << " "
-        << setw( 3 ) << Nodes[ s->end_node ].suffix_node << " "
-        << setw( 5 ) << s->first_char_index << " "
-        << setw( 6 ) << s->last_char_index << "  ";
-        int top;
-        if ( current_n > s->last_char_index )
-            top = s->last_char_index;
-        else
-            top = current_n;
-        for ( int l = s->first_char_index ;
-             l <= top;
-             l++ )
-            cout << T[ l ];
-        cout << "\n";
-    }
-}
-*/
 
 //
 // The canonical representation of a suffix for this algorithm
@@ -302,16 +261,7 @@ void Suffix::AddPrefix(int current_index )
         Edge *new_edge = &newEdge;
         new_edge->Insert();
         Nodes[new_edge->end_node].leaf_index=Node::Leaf++;
-        
-        //update leaf_count_beneath for upper node(icarus)
-        /*
-        int fatherNode = parent_node;
-        while (fatherNode!=0) {
-            Nodes[fatherNode].leaf_count_beneath++;
-            fatherNode = Nodes[fatherNode].father;
-        }
-        */
-        
+                
         if ( last_parent_node > 0 )
             Nodes[ last_parent_node ].suffix_node = parent_node;
         last_parent_node = parent_node;
@@ -331,142 +281,9 @@ void Suffix::AddPrefix(int current_index )
 }
 
 
-//
-// The validation code 
-//
-/*
-char CurrentString[ MAX_LENGTH ];
-char GoodSuffixes[ MAX_LENGTH ];
-char BranchCount[ MAX_LENGTH * 2 ] = { 0 };
 
-void validate()
-{
-    for ( int i = 0 ; i < N ; i++ )
-        GoodSuffixes[ i ] = 0;
-    walk_tree( 0, 0 );
-    int error = 0;
-    for ( int i = 0 ; i < N ; i++ )
-        if ( GoodSuffixes[ i ] != 1 ) {
-            cout << "Suffix " << i << " count wrong!\n";
-            error++;
-        }
-    if ( error == 0 )
-        cout << "All Suffixes present!\n";
-    int leaf_count = 0;
-    int branch_count = 0;
-    for (int i = 0 ; i < Node::Count ; i++ ) {
-        if ( BranchCount[ i ] == 0 )
-            cout << "Logic error on node "
-            << i
-            << ", not a leaf or internal node!\n";
-        else if ( BranchCount[ i ] == -1 )
-            leaf_count++;
-        else
-            branch_count += BranchCount[ i ];
-    }
-    cout << "Leaf count : "
-    << leaf_count
-    << ( leaf_count == ( N + 1 ) ? " OK" : " Error!" )
-    << "\n";
-    cout << "Branch count : "
-    << branch_count
-    << ( branch_count == (Node::Count - 1) ? " OK" : " Error!" )
-    << endl;
-}
-
-int walk_tree( int start_node, int last_char_so_far )
-{
-    int edges = 0;
-    for ( int i = 0 ; i < 256 ; i++ ) {
-        Edge edge = Edge::Find( start_node, i );
-        if ( edge.start_node != -1 ) {
-            if ( BranchCount[ edge.start_node ] < 0 )
-                cerr << "Logic error on node "
-                << edge.start_node
-                << '\n';
-            BranchCount[ edge.start_node ]++;
-            edges++;
-            int l = last_char_so_far;
-            for ( int j = edge.first_char_index ; j <= edge.last_char_index ; j++ )
-                CurrentString[ l++ ] = T[ j ];
-            CurrentString[ l ] = '\0';
-            if ( walk_tree( edge.end_node, l ) ) {
-                if ( BranchCount[ edge.end_node ] > 0 )
-                    cerr << "Logic error on node "
-                    << edge.end_node
-                    << "\n";
-                BranchCount[ edge.end_node ]--;
-            }
-        }
-    }
-    //
-    // If this node didn't have any child edges, it means we
-    // are at a leaf node, and can check on this suffix.  We
-    // check to see if it matches the input string, then tick
-    // off it's entry in the GoodSuffixes list.
-    //
-    if ( edges == 0 ) {
-        cout << "Suffix : ";
-        for ( int m = 0 ; m < last_char_so_far ; m++ )
-            cout << CurrentString[ m ];
-        cout << "\n";
-        GoodSuffixes[ strlen( CurrentString ) - 1 ]++;
-        cout << "comparing: " << ( T + N - strlen( CurrentString ) + 1 )
-        << " to " << CurrentString << endl;
-        if ( strcmp(T + N - strlen(CurrentString) + 1, CurrentString ) != 0 )
-            cout << "Comparison failure!\n";
-        return 1;
-    } else
-        return 0;
-}
-*/
 
 /******   other custom function   *******/
-
-void Node::showNodeString(){
-    //        std::string nodeString(&T[first_char_index],last_char_index-first_char_index);
-    //    cout<<"\t"<<nodeString<<"\t"<<endl;
-    
-}
-
-/*
-int Suffix::countString(const string &query ){
-    
-    int currentNode = 0;
-    int current_query_index = 0;
-    int queryTemp;
-    
-    while (current_query_index<query.size()) {
-        Edge tempEdge = Edge::Find(currentNode,query[current_query_index]);
-        // cout<<tempEdge<<endl;
-        //if find
-        if (tempEdge.start_node!=-1) {
-            string edgeString(&T[tempEdge.first_char_index],tempEdge.last_char_index-tempEdge.first_char_index+1);
-//          cout<<T[tempEdge.first_char_index]<<edgeString<<endl;
-            queryTemp = query.size()-current_query_index;
-            if (edgeString.size()>=queryTemp){
-                if (query.substr(current_query_index,queryTemp)!=edgeString.substr(0,queryTemp)) {
-                    return 0;
-                }
-                else {
-                    return Nodes[tempEdge.end_node].leaf_count_beneath;
-                }
-            }
-            else {
-                if (query.substr(current_query_index,edgeString.size())!=edgeString) {
-                    return 0;
-                }
-                currentNode = tempEdge.end_node;
-                current_query_index = current_query_index + edgeString.size();
-            }
-        }
-        else {
-            return 0;
-        }
-    }
-    return -1;
-}
-*/
 
 vector<int> Suffix::locateMotif(Motif& currentMotif){
     //implement2 find from edges walk tree
@@ -578,77 +395,7 @@ bool Suffix::initialize(){
 
 
 
-
-//
-// STREED.CPP - Suffix tree creation - debug version
-//
-// Mark Nelson, updated December, 2006
-//
-// This code has been tested with Borland C++ and
-// Microsoft Visual C++.
-//
-// This program gets a line of input, either from the
-// command line or from user input.  It then creates
-// the suffix tree corresponding to the given text.
-//
-// This program is intended to be a supplement to the
-// code found in STREE.CPP.  It contains a extensive
-// debugging information, which might make it harder
-// to read.
-//
-// This version of the program also gets around the
-// problem of requiring the last character of the
-// input text to be unique.  It does this by overloading
-// operator[] for the input buffer object.  When you select
-// T[ N ], you will get a value of 256, which is obviously
-// going to be a unique member of the character string.
-// This overloading adds some complexity, which just might
-// make the program a little harder to read!
-//
-// In addition, there is some overloading trickery that lets
-// you send T[i] to the output stream, and send the 256 value
-// as the string "<EOF>".  Another convenience that adds
-// code and complexity.
-//
-
-
-
-//
-//
-// The maximum input string length this program
-// will handle is defined here.  A suffix tree
-// can have as many as 2N edges/nodes.  The edges
-// are stored in a hash table, whose size is also
-// defined here.  When I want to exercise the hash
-// table a little bit, I set MAX_LENGTH to 6 and
-// HASH_TABLE_SIZE to 13.
-//
-//
-
-
-
-
-
-
-//
-// A suffix in the tree is denoted by a Suffix structure
-// that denotes its last character.  The canonical
-// representation of a suffix for this algorithm requires
-// that the origin_node by the closest node to the end
-// of the tree.  To force this to be true, we have to
-// slide down every edge in our current path until we
-// reach the final node.
-
-
-//
-// This debug routine prints out the value of a
-// Suffix object.  In order to print out the
-// entire suffix string, I have to walk up the
-// tree to each of the parent nodes.  This is
-// handled by the print_parents() routine, which
-// does this recursively.
-//
-
+/******** I/O methods ********/
 
 
 ostream &operator<<( ostream &s, const Suffix &str )
@@ -688,22 +435,6 @@ void print_parents( ostream &s, int node)
 }
 
 
-istream &operator>>( istream &s, Buffer &b )
-{
-    s >> b.data;
-    assert( strlen( b.data ) < MAX_LENGTH );
-    b.N = strlen( b.data );
-    return s;
-}
-
-ostream &operator<<( ostream &s, Aux &a )
-{
-    if ( a.i == 256 )
-        s << "<EOF>";
-    else
-        s << (char) a.i;
-    return s;
-}
 
 ostream &operator<<( ostream &s, const Edge &edge )
 {
@@ -724,26 +455,4 @@ ostream &operator<<( ostream &s, const Edge &edge )
 
 
 
-//
-// Adding a suffix line in AddPrefix() is really
-// a simple operation.  All that needs to be done
-// is to write out the correct value to the Nodes[]
-// table in the correct place.  Since I've
-// added some debug code here, it made sense to
-// move it to a separate routine, even though it
-// isn't being done that way in STREE.CPP
-//
-
-void Suffix::AddSuffixLink( int &last_parent, int parent)
-{
-    if ( last_parent > 0 ) {
-        cout << "Creating suffix link from node "
-        << last_parent
-        << " to node "
-        << parent
-        << ".\n";
-        Nodes[ last_parent ].suffix_node = parent;
-    }
-    last_parent = parent;
-}
 

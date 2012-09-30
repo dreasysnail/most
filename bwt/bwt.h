@@ -1,6 +1,6 @@
 //
 //  bwt.h
-//  bwt
+//  MOST
 //
 //  Created by zhang yizhe on 12-5-15.
 //  Copyright (c) 2012年 SJTU. All rights reserved.
@@ -14,7 +14,6 @@
 #include <iomanip>
 #include <cstdlib>
 #include <cstring>
-#include <cassert>
 #include <string>
 #include <algorithm>
 #include "common.h"
@@ -53,7 +52,6 @@ public :
     int Implicit(){ return last_char_index >= first_char_index; }
     void Canonize();
 
-    //my custom function
     //restore searched motif-loci
     std::vector<int> loci;
     
@@ -61,11 +59,9 @@ public :
     int countString(const string &query );
     bool isExistString(const string &query);
     bool initialize();
-    //static Node (*Nodes);
-    //static Edge (*Edges);
     void AddSuffixLink( int &last_parent, int parent); 
     vector<int> locateMotif(Motif& currentMotif);
-    void traverseLoci(int offset, int nodeIndex);
+    void traverseLoci(int OFF_SET, int nodeIndex);
 
 };
 
@@ -86,9 +82,6 @@ public :
     static Edge Find( int node, int c );
     static long int Hash( int node, int c );
     
-
-    //   static Node (*Nodes);
-    //static Edge (*Edges);
 };
 
 class Node {
@@ -104,62 +97,15 @@ public :
     static int Count;
     static int Leaf;
     
-    //my custome variance
-
-    
-
-    
-    //    static Node (*Nodes);
-    //static Edge (*Edges);
-    
 };
-
-
-
-class Aux {
-    public :
-    int i;
-    Aux( int rhs ){ i = rhs; }
-    operator int(){ return i; }
-};
-
-
-class Buffer {
-    public :
-    char data[ MAX_LENGTH ];
-    int N;
-    Aux operator[]( int size ) const;
-};
-
-inline Aux Buffer::operator[]( int i ) const
-{
-    if ( i >= N )
-        return Aux( 256 );
-    else
-        return Aux( data[ i ] );
-}
-
 
 
 
 
 //
-// Necessary forward references
-//
-void validate();
-int walk_tree( int start_node, int last_char_so_far );
-
-
-
-
-//
-void dump_edges( int current_n );
-void AddPrefix( Suffix &active, int last_char_index );
 ostream &operator<<( ostream &s, const Suffix &str );
-ostream &operator<<( ostream &s, Aux &a );
 ostream &operator<<( ostream &s, const Edge &edge );
 ostream &operator<<( ostream &s, const Node &node );
-istream &operator>>( istream &s, Buffer &b );
 void print_parents( ostream &s, int node);
 
 #endif

@@ -1,7 +1,7 @@
 
 //
-//  main.cpp
-//  bwt
+//  most.cpp
+//  MOST
 //
 //  Created by icarus on 12-5-10.
 //  Copyright 2012年 sjtu. All rights reserved.
@@ -12,14 +12,12 @@
 #include <queue>
 #include <algorithm>
 #include <cctype>
-//for mkdir
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "common.h"
 #include "bwt.h"
 #include "motif.h"
 #include "FFT.h"
-//for directory
 #include <cstdlib>
 
 using namespace std;
@@ -41,9 +39,10 @@ int main(int argc, char **argv)
 {
     clock_t tStart,t1,t2,t2_1,t3,t4,tEnd;
     tStart=clock();
+    
+    /********************* parse files ***********************/
 
     parseCommandLine(argc, argv);
-
     genomeRegions *gR = new genomeRegions(atoi(option["flanking"].c_str()));
     
     //for test
@@ -86,19 +85,13 @@ int main(int argc, char **argv)
                 break;
         } 
         
-        //initiate T 
+        //initiate whole sequence 
         cerr<<"regionFile（bedFormat）:"<<option["regionfile"]<<endl;
         RegionSize = gR->appendReverseGenome(T);
         t1=clock();
         cerr<<"Parsing Fasta:"<<double((t1-tStart)/1e6)<<endl;
 
-        
-        
-        
-        
-        
-        
-        
+    
         // tag mode
         if (option["mode"]=="tag") {
 
@@ -114,22 +107,22 @@ int main(int argc, char **argv)
             cerr<<"Parsing Wig:"<<double((t2_1-t1)/1e6)<<endl;
             t1=t2_1;
             
-            //cout<<gR->regionTags<<endl;
             for (int i=0; i<gR->tagName.size(); i++) {
                 cerr<<gR->tagName[i]<<" size:"<<gR->regionTags[gR->tagName[i]].size()<<"\t";
-                //cerr<<gR->regionTags[gR->tagName[i]]<<endl;
-                cerr<<long(gR->regionTags[gR->tagName[i]].size())-EXTENDBOUND*4*gR->segmentCount<<endl;
-                assert(RegionSize==long(gR->regionTags[gR->tagName[i]].size())-EXTENDBOUND*4*gR->segmentCount);
+                cerr<<long(gR->regionTags[gR->tagName[i]].size())-EXTEND_BOUND*4*gR->segmentCount<<endl;
+                assert(RegionSize==long(gR->regionTags[gR->tagName[i]].size())-EXTEND_BOUND*4*gR->segmentCount);
             }
         }
         cerr<<"RegionSize:"<<RegionSize<<endl;
-        //assert(RegionSize<=MAX_LENGTH);
-        //assert(RegionSize*2<=HASH_TABLE_SIZE);
         assert(gR->segmentStartPos.back()==RegionSize);
         
-        Edges = new Edge[long(RegionSize*2*1.6)];
+        
+        /********************* Count occurence ***********************/
+        
+        
+        Edges = new Edge[long(RegionSize*2*HASH_TABLE_MULTIPLER)];
         Nodes = new Node[RegionSize*2+1];
-        HASH_TABLE_SIZE =long(RegionSize*2*1.6);
+        HASH_TABLE_SIZE =long(RegionSize*2*HASH_TABLE_MULTIPLER);
         
         N = T.size() - 1;
         
@@ -143,7 +136,8 @@ int main(int argc, char **argv)
         //count words
         string fileName = outPutDir + "/cluster.log";
         ofstream clusterFile(fileName.c_str(),ios::app);
-        //pop minimal element    heap 
+        
+        //pop minimal element from heap 
         priority_queue<Motif,vector<Motif>,compareMotif> MotifHeap;
         
         const int K_4=int(pow1(4, K));
@@ -173,10 +167,10 @@ int main(int argc, char **argv)
                 if (counter1==1) {
                     MotifHeap.push(thisMotif);
                 }
-                if (MotifHeap.size()<MAXMOTIFNUM||thisMotif.overallScore>MotifHeap.top().overallScore) {
-                    //protocol:has pfm loci lociscore sign noise conscore motifProb overallscore.
+                if (MotifHeap.size()<MAX_WORD_NUM||thisMotif.overallScore>MotifHeap.top().overallScore) {
+                   //protocol:has pfm loci lociscore sign noise conscore motifProb overallscore.
                     MotifHeap.push(thisMotif);
-                    if (MotifHeap.size()>MAXMOTIFNUM) {
+                    if (MotifHeap.size()>MAX_WORD_NUM) {
                         MotifHeap.pop();
                     }
                 }
@@ -201,15 +195,14 @@ int main(int argc, char **argv)
         
     
         /********************* Clustering ***********************/
-   
         
         vector<Cluster> clusters;
         int exceedLengthCount = 0;
         int inverseAlignedCount = 0;
         int normalAligned = 0;
-        int maxMotifSize=min(MAXMOTIFNUM, int(MotifHeap.size()));
+        int maxMotifSize=min(MAX_WORD_NUM, int(MotifHeap.size()));
         vector<Cluster> qualifiedMotifs;
-        qualifiedMotifs.reserve(MAXMOTIFNUM);
+        qualifiedMotifs.reserve(MAX_WORD_NUM);
         
         
         //extend motif
@@ -282,7 +275,6 @@ int main(int argc, char **argv)
         chipPeaks.drawDist(*gR, CHIPDist);
 #endif
         //qualifiedMotifs[0].printMotif();
-
         Cluster temp0(qualifiedMotifs[0]);
         
         clusters.push_back(temp0);
@@ -296,12 +288,12 @@ int main(int argc, char **argv)
                 pair<float,int> dist_shift = clusters[j].editDistance(qualifiedMotifs[i]);
                 if (option["mode"]=="tag"){
                     KLDiv = clusters[j].tagDistrDistance(qualifiedMotifs[i]);
-                    if (fabs(dist_shift.first)<=MAXDISTANCE&&KLDiv<=MAXKLDIV) {
+                    if (fabs(dist_shift.first)<=MAX_DIST&&KLDiv<=MAX_KL_DIV) {
                         aligned = true;
                     }
                 }
                 else {
-                    if (fabs(dist_shift.first)<=MAXDISTANCE) {
+                    if (fabs(dist_shift.first)<=MAX_DIST) {
                         aligned = true;
                     }
                 }
@@ -341,7 +333,7 @@ int main(int argc, char **argv)
                 }
                 //for test: cluster system not aligned by tag
 #ifdef CLUSTERLOG   
-                else if (dist_shift.first>0&&dist_shift.first<=MAXDISTANCE&&KLDiv>MAXKLDIV){
+                else if (dist_shift.first>0&&dist_shift.first<=MAX_DIST&&KLDiv>MAX_KL_DIV){
                     if (option["mode"]=="tag"){
                         clusterFile<<"KLDIV not consistent:"<<"\n";
                         clusterFile<<i<<setw(8)<<"\t";
@@ -369,7 +361,7 @@ int main(int argc, char **argv)
 
             }
             //if not aligned to any cluster, new cluster
-            if (clusters.size()<MAXCLUSTERNUM){
+            if (clusters.size()<MAX_CLUSTER_NUM){
                 qualifiedMotifs[i].index = -1;
                 clusterFile<<"+new cluster: "<<i<<" "<<qualifiedMotifs[i].query<<endl;
                 Cluster temp0(qualifiedMotifs[i]);
@@ -387,7 +379,7 @@ int main(int argc, char **argv)
             clusters[j].generateIUPAC();
             //clusters[j].trim();
             clusters[j].mergeLoci();
-            clusters[j].testMotifTag(*gR,true);
+            clusters[j].testMotifTag(*gR,option["drawdist"]=="T");
             //clusters[j].calConscore(RegionSize);
             clusters[j].sumOverallScore();
         }
@@ -434,10 +426,6 @@ int main(int argc, char **argv)
                 
             }
         }
-        for (int i=0; i<gR->tagName.size(); i++) {
-            cout<<gR->tagName[i]<<"_Intensity\t";
-            
-        }
         cout<<"lociSize:"<<endl;
         for (int i=0; i<clusters.size(); i++){
             clusters[i].printMotif(cout);
@@ -464,8 +452,6 @@ int main(int argc, char **argv)
     }
     return 0;
 }
-
-
 
 
 
@@ -563,4 +549,5 @@ void test(){
     cerr<<m1.PearsonCorrPFM(m2, 0, 6, false)<<endl;
     assert(0==1);
 }
+
 
