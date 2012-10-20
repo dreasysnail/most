@@ -375,7 +375,7 @@ void printUsage()
 	usage		+=	"    -m <normal/tag/help>       Runing mode:tagfile should be specified if tag mode is selected\n\n";
 	usage		+=	"    -f <DNA sequence file>     Whole genome DNA sequences\n\n";
     //usage		+=	"    -rf <DNA sequence file>    Regional DNA 
-    usage		+=	"    -b <BED file>              Regions of interest\n\n";
+    usage		+=	"    -r <BED file>              Regions of interest\n\n";
     usage		+=	"    -t <WIG file>              Tag file for Histone marks or other sources\n\n";
     //usage		+=	"    CAVEAT:WIG FILE SHOULD BE SORTED\n\n";
     usage		+=	"    Optional Parameters:\n\n";

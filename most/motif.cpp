@@ -209,6 +209,8 @@ void Motif::initProb(const genomeRegions& gR,int order){
 }
 
 void Motif::initPFM(){
+    //protocol : in  loci
+    //           out pfm
     for (int i=0; i<query.size(); i++) {
         int count = loci.size();
         switch (query[i]) {
@@ -457,21 +459,7 @@ pair<float,int> Cluster::editDistance(const Motif& m){
             tempScore = 0.5*(MAX_SHIFT-bound+i+1);
             //tempScore = K-cluster.query.size()+i;
         }
-        /*
-        for (int j=0; j<K; j++) {
-            if (j+i<0||j+i>=int(cluster.query.size())) {
-                continue;
-            }
-            
-            else {
-                //tempScore += distance[alp2num(m.query[j])][alp2num(cluster.query[j+i])];
-                tempScore += 1-log2f(cluster.pfm[alp2num(m.query[j])][j+i]/float(cluster.totalPFM[j+i])+1);
-                
-            
-            } 
-        }
-        */
-        tempScore = (1-PearsonCorrPFM(m,i,int(cluster.pfm[0].size()),true))*DISTWEIGHT;
+        tempScore += (1-PearsonCorrPFM(m,i,int(cluster.pfm[0].size()),true))*DISTWEIGHT;
         if (tempScore<score) {
             score = tempScore;
             optimShift = i;
@@ -491,7 +479,7 @@ pair<float,int> Cluster::editDistance(const Motif& m){
             tempScore = 0.5*(MAX_SHIFT-bound+i+1);
             //tempScore = K-cluster.query.size()+i;
         }
-        tempScore = (1-PearsonCorrPFM(m,i,int(cluster.pfm[0].size()),false))*DISTWEIGHT;
+        tempScore += (1-PearsonCorrPFM(m,i,int(cluster.pfm[0].size()),false))*DISTWEIGHT;
         if (tempScore<score) {
             score = tempScore;
             optimShift = i;
@@ -572,7 +560,7 @@ void Cluster::mergeLoci(){
     
     lociScore.clear();
     sort(loci.begin(),loci.end());
-    int prevSize = loci.size();
+    //int prevSize = loci.size();
     vector<int> newloci(loci.begin(),loci.begin()+1);
     lociScore.push_back(1);
     for (int i=1; i<loci.size(); i++) {
@@ -586,7 +574,7 @@ void Cluster::mergeLoci(){
         }
     }
     loci.swap(newloci);
-    score = score*loci.size()/float(prevSize);
+    //score = score*loci.size()/float(prevSize);
 }
 
 void Cluster::trim(){
@@ -623,27 +611,14 @@ void Cluster::reCalSumBin(const Motif& m,const genomeRegions &gR){
 }
 
 bool Cluster::trivial(int pos){
-    /* 
-    //only one
-    for (int i=0; i<4; i++) {
-        if (pfm[i][pos]==totalPFM[pos])
-            return true;
-    }
-    */
-    //all same
-    for (int i=0; i<4; i++) {
-        assert(totalPFM[pos]!=0);
-        if (pfm[i][pos]/float(totalPFM[pos])>0.4)
-
-            return false;
-    }
-    return true;
+    return query[pos]=='N';
 }
+
 bool Cluster::oligo(int pos){
     //only one
     for (int i=0; i<4; i++) {
         assert(totalPFM[pos]!=0);
-        if (pfm[i][pos]==totalPFM[pos])
+        if (pfm[i][pos]>=totalPFM[pos]*0.95)
             return true;
     }
     return false;
@@ -662,14 +637,19 @@ void Cluster::getExtended(const Motif &m, genomeRegions &gR, Suffix & active){
         string tempWord = originWord;
         //permutation in first places
         for (int alp=0; alp<4; alp++) {
-            tempWord[pos] = alps[alp];
             //for each word
+            tempWord[pos] = alps[alp];
             Motif thisMotif(tempWord);
-            thisMotif.initProb(gR, atoi(option["order"].c_str()));
-            thisMotif.loci = active.locateMotif(thisMotif);
-            thisMotif.calConscore(RegionSize);
-            if (thisMotif.score<=0) {
-                continue;
+            if (originWord[pos]==alps[alp]) {
+                thisMotif = m;
+            }
+            else {
+                thisMotif.initProb(gR, atoi(option["order"].c_str()));
+                thisMotif.loci = active.locateMotif(thisMotif);
+                thisMotif.calConscore(RegionSize);
+                if (thisMotif.score<=0) {
+                    continue;
+                }                
             }
             pfm[alp][pos] = thisMotif.loci.size();
             appendLoci(thisMotif);
@@ -761,7 +741,7 @@ void Cluster::calPFM(const Motif& m,int optimShift){
                 pfm[j][i+optimShift] += m.pfm[j][i];
             }
         }
-        for (int i=K-OFF_SET; i<K; i++) {
+        for (int i=K-offset; i<K; i++) {
             for (int j=0; j<4; j++) {
                 pfm[j].push_back(m.pfm[j][i]) ;
             }
@@ -801,7 +781,10 @@ void Motif::sumOverallScore(){
 }
 
 void Cluster::mergeProb(const Motif& m){
-    score =(score*loci.size()+m.score*m.loci.size())/(loci.size()+m.loci.size());    motifProb = (loci.size()+m.loci.size())/RegionSize/score;
+    //merging score
+    //score = avg.score of members weighted by loci.size()
+    score =(score*loci.size()+m.score*m.loci.size())/(loci.size()+m.loci.size());
+    //motifProb = (loci.size()+m.loci.size())/RegionSize/score;
     return;
 }
 

@@ -158,7 +158,7 @@ int main(int argc, char **argv)
                     continue;
                 }
                 counter1++;
-                //thisMotif.initPFM();
+                thisMotif.initPFM();
                 //thisMotif.initLociScore();
                 if (option["mode"]=="tag"){
                     thisMotif.testMotifTag(*gR, false);
@@ -168,7 +168,7 @@ int main(int argc, char **argv)
                     MotifHeap.push(thisMotif);
                 }
                 if (MotifHeap.size()<MAX_WORD_NUM||thisMotif.overallScore>MotifHeap.top().overallScore) {
-                   //protocol:has pfm loci lociscore sign noise conscore motifProb overallscore.
+                   //protocol:has pfm loci lociscore sign noise conscore motifProb overallscore  bins  sumbin.
                     MotifHeap.push(thisMotif);
                     if (MotifHeap.size()>MAX_WORD_NUM) {
                         MotifHeap.pop();
@@ -297,6 +297,7 @@ int main(int argc, char **argv)
                         aligned = true;
                     }
                 }
+                //reverse aligned
                 if (dist_shift.first<=0) {
                     if (aligned) {
                     //if highest mark is antisense and matched current cluster,discard
@@ -324,7 +325,8 @@ int main(int argc, char **argv)
                         clusters[j].reCalSumBin(qualifiedMotifs[i], *gR);
                     }
                     clusters[j].appendLoci(qualifiedMotifs[i]);
-                    //clusters[j].mergeProb(qualifiedMotifs[i]);
+                    //merge score and prob
+                    clusters[j].mergeProb(qualifiedMotifs[i]);
                     //update noise and tagscore
                     clusters[j].testMotifTag(*gR,false);
                     clusters[j].sumOverallScore();
@@ -377,7 +379,7 @@ int main(int argc, char **argv)
         for (int j=0; j<clusters.size(); j++){
             
             clusters[j].generateIUPAC();
-            //clusters[j].trim();
+            clusters[j].trim();
             clusters[j].mergeLoci();
             clusters[j].testMotifTag(*gR,option["drawdist"]=="T");
             //clusters[j].calConscore(RegionSize);

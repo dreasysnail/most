@@ -195,14 +195,14 @@
 		A536A4DC143AAB5100A4F152 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = bwt;
 			};
 			name = Debug;
 		};
 		A536A4DD143AAB5100A4F152 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = bwt;
 			};
 			name = Release;
 		};
