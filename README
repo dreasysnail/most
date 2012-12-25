@@ -1,0 +1,115 @@
+**********************************************************************************************************************************
+												    	Introduction
+**********************************************************************************************************************************
+MOST is a fast MOTIF finding tool(MOtif finding by Suffix tree and heterogeneous Tags). MOST+ is faster than existing motif finding algorithms to our knowledge by taking advantage of suffix tree. It also use heterogeneous information, like histone modification or DNase I sensitivity, to help detect motif, thus rendering a higher level of accuracy. 
+
+For installation, check INSTALL contained in this package.
+
+Created by Yizhe Zhang, Chaochun Wei.
+Copyright (c) 2012 SJTU. All rights reserved.
+
+Change log:
+Version 1.0 (2012-6-28)  Base version
+Version 1.1 (2012-7-10)  Added FFT feature.
+Version 1.2 (2012-7-10)  Added control roc tagintensity feature; Fixed minor bugs.
+Version 1.3 (2012-9-9)   Fixed major bug for testMotifTag function when overlaying bins.
+Version 1.4 (2012-9-29)  Add motif extending options, Fix major bug of trimming.
+-----------------------------------------------------------------------------------------------------------------------------------
+COMMANDLINE ARGUMENTS:
+
+most [-someidentifier value1 value2 ...]  
+
+    -h help                    Print help information.
+	
+-----------------------------------------------------------------------------------------------------------------------------------
+    Required Parameters:
+
+    -m <normal/tag/help>       Normal mode use only genomic information to discover motif. Tag mode use additional genome-wide signatures.
+							   NOTE: tagfile should be specified if tag mode is selected(default normal)
+
+    -f <DNA sequence file>     Genome DNA sequences
+
+    -r <BED file>              Regions of interest, like ChIP-Seq peaks or promotor regions
+
+    -t <WIG file>              Tag file for Histone marks or DNase I sensitivity
+-----------------------------------------------------------------------------------------------------------------------------------
+    Optional Parameters:
+	
+	1）I/O
+
+    -o <outputDIR>             Specify an output directory(default MOST_out).
+	
+	-locifile <T/F>            Whether loci file of each cluster should be exported in a format of BED file(default T).
+							   Columns are sites, strand and corresponding marks.
+	
+	-drawdist <T/F>            Whether tag distribution file of each cluster should be exported(default T). 
+							   First column represents the distance to motif center, rest of columns represents corresponding tag distributions for each tag source. 
+	
+	-c <BEG file>              Control file for ChIP-seq experiment(default NONE). 
+	                           Regions marked as control will be masked. 
+	
+-----------------------------------------------------------------------------------------------------------------------------------	
+	
+	2) Finding over-represented words 
+	
+    -bo <0,1>                  Order for background sequence(default 0).
+	  						   Specify this to decide what order you what to calculate theoretical word occurrences based on markov model
+
+    -br <region/genome>        Specify background sequence(default region)
+							   Region means to create markov model on region of interest(i.e. region you used in -r option), genome means genome-wide markove model
+    
+	-rmrepeat <0,1,2>          Whether to remove repeat words(default 1)
+							   0: No removal 1: remove words contains only one type of nucleotide(i.e. AAAAAAAAA) 2: remove words like AAAAAAAAA,ATATATATA,AAAATAAAA...
+	
+	-p(-pvalue) <0-1 float>    P-value for low occurence word filtering(default 0.05)
+ 							   Words with significance less than this value are counted as trivial ones and do not participate in further calculations.
+	
+	-mn <1-20000 integer>      maximal number of qualified motifs to be clustered(default 1000)
+							   A higher number of this should allows you to detect more co-factors,but rendering the program slightly slower.
+	
+    -fl <1-20000 integer>      flanking the region of interest in both side with * bp (default 0)
+							   This option extend each line in your regionfile both sides. It's useful when you have an input summit regionfile pinpointing one position each line. you can set "-fl 50" to get an array of 100bp regions. 
+
+    -ps <0-200 integer>        Peusudo count added on PFM(default 1)
+	
+-----------------------------------------------------------------------------------------------------------------------------------	
+	3) Clustering words
+	    
+	-extend <T/F>              Whether or not to extend each qualified word by changing nucleotides site by site.(default T)
+							   This option extend word to simple motif before puting them into clustering. This may yield a higher level of accuracy but make it slower.
+	                           
+
+    -trim <10-100 integer>     Whether to remove the ambiguous ends of motif, bigger trimmer means more strict triming(default 50)
+
+    -cl <4-30 integer>         maximal length of single cluster(default 20)
+
+    -cs <0-1 float>            Stringency of clustering, big stringency value means more strict clustering(default 0.2)
+
+    -cn <1-500 integer>        maximal number of clusters(default 1000)
+	
+-----------------------------------------------------------------------------------------------------------------------------------	
+	4) FFT
+	
+	-fft <T/F>                 Whether to cast FFT on tag signal distribution(default T)
+							   NOTE: This option should only be checked if tag mode is on.
+							   
+-----------------------------------------------------------------------------------------------------------------------------------							   
+  	 5) Experimental features (Warning: highly unstable. Users are at their own risks to test these additional features)
+	
+	-roc <T/F>                 Plot roc regarding site level accuracy(default F)\n\n";
+	
+	-regionfile <T/F>          Whether or not region file of each cluster should be exported(default F)\n
+							   
+							   
+							   
+    
+
+
+
+
+	
+
+	
+ 
+
+
